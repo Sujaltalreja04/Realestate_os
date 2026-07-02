@@ -19,7 +19,7 @@ const fallbackLeads = [
     name: "Rahul Sharma",
     phone: "+91 98765 43210",
     email: "rahul.s@example.com",
-    project: "Shivalik Skyview",
+    project: "Ai RealEstate OS Skyview",
     score: 92,
     status: "Negotiation",
     action: "Follow up on pricing",
@@ -42,7 +42,7 @@ const fallbackLeads = [
     name: "Priya Patel",
     phone: "+91 98222 11100",
     email: "priya.p@example.com",
-    project: "Shivalik Highlife",
+    project: "Ai RealEstate OS Highlife",
     score: 85,
     status: "Site Visit Scheduled",
     action: "Schedule AR Tour",
@@ -65,7 +65,7 @@ const fallbackLeads = [
     name: "Amit Desai",
     phone: "+91 99888 77665",
     email: "amit.d@example.com",
-    project: "Shivalik Skyview",
+    project: "Ai RealEstate OS Skyview",
     score: 78,
     status: "Contacted",
     action: "Send brochure",
@@ -88,7 +88,7 @@ const fallbackLeads = [
     name: "Neha Gupta",
     phone: "+91 91234 56789",
     email: "neha.g@example.com",
-    project: "Shivalik Highlife",
+    project: "Ai RealEstate OS Highlife",
     score: 65,
     status: "New Lead",
     action: "Call back next week",
@@ -111,10 +111,10 @@ const fallbackLeads = [
 const fallbackBuilders = [
   {
     _id: "mock-builder-1",
-    name: "Shivalik Group",
-    company: "Shivalik Projects Limited",
+    name: "Ai RealEstate OS Group",
+    company: "Ai RealEstate OS Projects Limited",
     contact: "+91 79 3500 1100",
-    activeProjects: ["Shivalik Skyview", "Shivalik Highlife", "Shivalik Edge"],
+    activeProjects: ["Ai RealEstate OS Skyview", "Ai RealEstate OS Highlife", "Ai RealEstate OS Edge"],
     commissionAgreement: "2.5% commission payout. 1% upon execution of allotment letter, 1.5% upon registration."
   }
 ];
@@ -365,7 +365,7 @@ export default function CRM() {
 
   // Add Lead Form State
   const [newLead, setNewLead] = useState({
-    name: '', phone: '', email: '', project: 'Shivalik Skyview', score: 75, status: 'New Lead', source: 'Website Chat',
+    name: '', phone: '', email: '', project: 'Ai RealEstate OS Skyview', score: 75, status: 'New Lead', source: 'Website Chat',
     budget: 20000000, preferredLocation: 'Ambawadi', propertyType: 'Apartment', bhkPreference: '3 BHK', purpose: 'Buy',
     loanRequired: true, assignedExecutive: 'Sujal Talreja', familyDetails: '', occupation: '', annualIncome: 2000000, notes: ''
   });
@@ -1100,7 +1100,7 @@ export default function CRM() {
           setIsAddingLead(false);
           // reset form
           setNewLead({
-            name: '', phone: '', email: '', project: 'Shivalik Skyview', score: 75, status: 'New Lead', source: 'Website Chat',
+            name: '', phone: '', email: '', project: 'Ai RealEstate OS Skyview', score: 75, status: 'New Lead', source: 'Website Chat',
             budget: 20000000, preferredLocation: 'Ambawadi', propertyType: 'Apartment', bhkPreference: '3 BHK', purpose: 'Buy',
             loanRequired: true, assignedExecutive: 'Sujal Talreja', familyDetails: '', occupation: '', annualIncome: 2000000, notes: ''
           });
@@ -1324,7 +1324,7 @@ export default function CRM() {
               )));
               setLocalPredictionResults(prev => ({ ...prev, [leadId]: {
                 conversionProbability: prob,
-                bestFitProperty: lead.project || 'Shivalik Skyview',
+                bestFitProperty: lead.project || 'Ai RealEstate OS Skyview',
                 recommendedLocations: [loc, loc.includes('Ambawadi') ? 'SG Highway' : 'Ambawadi'],
                 nextBestAction: lead.loanRequired ? 'Schedule bank tie-up callback for loan pre-approval' : budget >= 25000000 ? 'Arrange a premium site visit at the showroom' : 'Send personalised AR walkthrough of the floorplan',
                 purchaseBehaviorAnalysis: `${lead.name} demonstrates strong buying intent with a budget of ₹${budget.toLocaleString()} aligned to ${loc} market rates. Their profile as ${lead.occupation || 'a professional'} with a score of ${lead.score}/100 indicates a high-value prospect.\n\nConversation sentiment analysis shows active engagement and trust signals. The lead has shown interest in ${lead.bhkPreference || '3 BHK'} configurations — follow up immediately while intent is warm.`,
@@ -1335,7 +1335,7 @@ export default function CRM() {
                   `Purpose: ${lead.purpose || 'Buy'} — clear buying motivation`,
                   lead.score >= 80 ? 'High CRM score: top-priority conversion candidate' : 'Score shows nurturing potential with active follow-up'
                 ],
-                scrapedMarketTrends: `${loc} real estate market shows consistent appreciation driven by infrastructure upgrades. Shivalik projects in this zone are outperforming the city average by 2.3%.`,
+                scrapedMarketTrends: `${loc} real estate market shows consistent appreciation driven by infrastructure upgrades. Ai RealEstate OS projects in this zone are outperforming the city average by 2.3%.`,
                 updatedAt: Date.now()
               }}));
             }
@@ -1375,7 +1375,7 @@ export default function CRM() {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(24);
     doc.setTextColor(212, 175, 55);
-    doc.text('SHIVALIK RERA BROCHURE', 20, 30);
+    doc.text('AI REALESTATE OS RERA BROCHURE', 20, 30);
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(11);
@@ -1416,7 +1416,7 @@ export default function CRM() {
     doc.text('• Foundation Slab: 15% payment release on structural foundation completion', 25, 178);
     doc.text('• Possession Phase: Final 10% payment with RERA tax registration', 25, 184);
     
-    doc.save(`Shivalik_${project.replace(/\s+/g, '_')}_Brochure.pdf`);
+    doc.save(`Ai RealEstate OS_${project.replace(/\s+/g, '_')}_Brochure.pdf`);
   };
 
   // Exporter for GST receipts
@@ -1425,7 +1425,7 @@ export default function CRM() {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(212, 175, 55);
-    doc.text('SHIVALIK GROUP', 20, 30);
+    doc.text('AI REALESTATE OS GROUP', 20, 30);
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
@@ -1472,7 +1472,7 @@ export default function CRM() {
     const doc = new jsPDF();
     doc.setFontSize(22);
     doc.setTextColor(212, 175, 55);
-    doc.text('Shivalik Premium Portfolio', 20, 30);
+    doc.text('Ai RealEstate OS Premium Portfolio', 20, 30);
     
     doc.setFontSize(13);
     doc.setTextColor(60, 60, 60);
@@ -1503,21 +1503,21 @@ export default function CRM() {
       });
     }
 
-    doc.save(`Shivalik_AI_PitchDeck_${selectedLead.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Ai RealEstate OS_AI_PitchDeck_${selectedLead.name.replace(/\s+/g, '_')}.pdf`);
   };
 
   // AI draft triggers
   const handleAIDraftComms = (type) => {
     if (!selectedLead) return;
     const clientName = selectedLead.name;
-    const clientProject = selectedLead.project || 'Shivalik Skyview';
+    const clientProject = selectedLead.project || 'Ai RealEstate OS Skyview';
     const clientBhk = selectedLead.bhkPreference || '3 BHK';
 
     let draft = '';
     if (type === 'whatsapp') {
-      draft = `Dear ${clientName}, this is Sujal Talreja from Shivalik Group. Based on our AI mapping, we have opened up two premium ${clientBhk} apartments facing the gardens in ${clientProject} which perfectly align with your budget parameters. Please let me know when you would like to schedule a quick physical visit or a digital AR interactive tour. Cheers!`;
+      draft = `Dear ${clientName}, this is Sujal Talreja from Ai RealEstate OS Group. Based on our AI mapping, we have opened up two premium ${clientBhk} apartments facing the gardens in ${clientProject} which perfectly align with your budget parameters. Please let me know when you would like to schedule a quick physical visit or a digital AR interactive tour. Cheers!`;
     } else if (type === 'email') {
-      draft = `Subject: Tailored Housing Portfolio - Shivalik ${clientProject}\n\nDear ${clientName},\n\nHope this email finds you well.\n\nFollowing up on our discussions regarding a residency at Shivalik Group, our real-estate analytics engine has mapped your preferences to our newly updated inventory matrix. We have matched units in ${clientProject} that match your preferred ${clientBhk} layout and fit within your target budget criteria.\n\nAttached is our official digital RERA brochure. Let us schedule an executive tour of the site soon.\n\nBest regards,\nSujal Talreja\nSales Coordinator, Shivalik Group`;
+      draft = `Subject: Tailored Housing Portfolio - Ai RealEstate OS ${clientProject}\n\nDear ${clientName},\n\nHope this email finds you well.\n\nFollowing up on our discussions regarding a residency at Ai RealEstate OS Group, our real-estate analytics engine has mapped your preferences to our newly updated inventory matrix. We have matched units in ${clientProject} that match your preferred ${clientBhk} layout and fit within your target budget criteria.\n\nAttached is our official digital RERA brochure. Let us schedule an executive tour of the site soon.\n\nBest regards,\nSujal Talreja\nSales Coordinator, Ai RealEstate OS Group`;
     } else if (type === 'summary') {
       draft = `Interaction Summary:\n• Client is interested in a premium ${clientBhk} in ${clientProject}.\n• Financial standing: budget capped at INR ${(selectedLead.budget || 20000000).toLocaleString()}, annual income reported at INR ${(selectedLead.annualIncome || 2000000).toLocaleString()}.\n• Loan requirement flagged as ${selectedLead.loanRequired ? 'YES' : 'NO'}.\n• Main preferences: high floors, quiet neighborhood, East-facing, and requires a dedicated cab service for physical site visits.`;
     }
@@ -1958,7 +1958,7 @@ export default function CRM() {
                   type="text" 
                   value={newBuilder.name} 
                   onChange={e => setNewBuilder({...newBuilder, name: e.target.value})} 
-                  placeholder="e.g. Shivalik Group" 
+                  placeholder="e.g. Ai RealEstate OS Group" 
                   required 
                 />
               </div>
@@ -1968,7 +1968,7 @@ export default function CRM() {
                   type="text" 
                   value={newBuilder.company} 
                   onChange={e => setNewBuilder({...newBuilder, company: e.target.value})} 
-                  placeholder="e.g. Shivalik Projects Limited" 
+                  placeholder="e.g. Ai RealEstate OS Projects Limited" 
                   required 
                 />
               </div>
@@ -2398,7 +2398,7 @@ export default function CRM() {
                       const rawBudget = selected?.budget || 18000000;
                       const budText = formatBudget(rawBudget, automationLang);
                       
-                      const projText = selected?.project || "Shivalik Skyview";
+                      const projText = selected?.project || "Ai RealEstate OS Skyview";
                       const leadNameText = selected?.name || "Client";
 
                       // Helper to get Gujarati honorific based on name
@@ -2470,7 +2470,7 @@ export default function CRM() {
                         transcript = [
                           { sender: "agent", text: `Hello, is this ${leadNameText}?`, time: "0:02" },
                           { sender: "lead", text: `Yes, this is ${leadNameText}. Who is this?`, time: "0:06" },
-                          { sender: "agent", text: `Hi! I'm calling from Shivalik Group. I see you recently inquired about our project, ${projText}, and were checking options for a premium ${bhkText}. Am I reaching you at a good time?`, time: "0:18" },
+                          { sender: "agent", text: `Hi! I'm calling from Ai RealEstate OS Group. I see you recently inquired about our project, ${projText}, and were checking options for a premium ${bhkText}. Am I reaching you at a good time?`, time: "0:18" },
                           { sender: "lead", text: `Yes, I was looking at that. I'm searching for a property with a budget around ₹${budText} Lakhs. Are there units available?`, time: "0:25" },
                           { sender: "agent", text: `Yes, absolutely! We have a few premium options in ${projText} that align perfectly. They feature high sunlight ratings, structural height optimization, and modern balconies. Would you like me to send you the site brochure?`, time: "0:42" },
                           { sender: "lead", text: `Yes, definitely. Please send it over so I can review the floor plans.`, time: "0:48" },
@@ -2598,7 +2598,7 @@ export default function CRM() {
                   <div className="flex justify-between align-center border-bottom pb-2">
                     <div className="flex align-center gap-2">
                       <span className="ai-badge"><Sparkles size={12}/> AI Calling Agent Active</span>
-                      <span className="text-muted font-small">Agent Ref: Shivalik Voice CRM-V1</span>
+                      <span className="text-muted font-small">Agent Ref: Ai RealEstate OS Voice CRM-V1</span>
                       <span style={{ fontSize: '10px', padding: '2px 7px', background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '6px', color: '#a5b4fc', fontWeight: 600, letterSpacing: '0.3px' }}>
                         🎙 Sarvam AI TTS
                       </span>
@@ -2898,7 +2898,7 @@ export default function CRM() {
                               fontWeight: 'bold'
                             }}>SG</div>
                             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Shivalik Group Official</div>
+                              <div style={{ fontSize: '11px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Ai RealEstate OS Group Official</div>
                               <div style={{ fontSize: '8px', opacity: 0.8 }}>Online (Business Account)</div>
                             </div>
                           </div>
@@ -3059,13 +3059,13 @@ export default function CRM() {
                             background: '#fafafa'
                           }}>
                             <div style={{ marginBottom: '3px' }}>
-                              <strong style={{ color: '#64748b' }}>From:</strong> sales@shivalikgroup.com
+                              <strong style={{ color: '#64748b' }}>From:</strong> sales@airealestateos.com
                             </div>
                             <div style={{ marginBottom: '3px' }}>
                               <strong style={{ color: '#64748b' }}>To:</strong> {leads.find(l => l._id === activeAutoLeadId)?.email || "client@domain.com"}
                             </div>
                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              <strong style={{ color: '#64748b' }}>Subject:</strong> Brochure & Site Floor Plans - Shivalik Group
+                              <strong style={{ color: '#64748b' }}>Subject:</strong> Brochure & Site Floor Plans - Ai RealEstate OS Group
                             </div>
                           </div>
 
@@ -3081,7 +3081,7 @@ export default function CRM() {
                           }}>
                             {showEmailSim ? (
                               <div className="animate-slide-up-bubble">
-                                {/* Shivalik Brand Header */}
+                                {/* Ai RealEstate OS Brand Header */}
                                 <div style={{
                                   borderBottom: '2px solid #D4AF37',
                                   pb: '6px',
@@ -3090,7 +3090,7 @@ export default function CRM() {
                                   justifyContent: 'space-between',
                                   alignItems: 'center'
                                 }}>
-                                  <strong style={{ color: '#D4AF37', letterSpacing: '1px', fontSize: '11px' }}>SHIVALIK GROUP</strong>
+                                  <strong style={{ color: '#D4AF37', letterSpacing: '1px', fontSize: '11px' }}>AI REALESTATE OS GROUP</strong>
                                   <span style={{ fontSize: '8px', color: '#94a3b8', fontStyle: 'italic' }}>Verified Sender</span>
                                 </div>
 
@@ -3134,7 +3134,7 @@ export default function CRM() {
                                   Sales CRM Coordinator
                                 </strong>
                                 <div style={{ color: '#94a3b8', fontSize: '8px' }}>
-                                  Shivalik Group, Ahmedabad
+                                  Ai RealEstate OS Group, Ahmedabad
                                 </div>
                               </div>
                             ) : (
@@ -3358,7 +3358,7 @@ export default function CRM() {
                           </div>
                           <div className="flex align-center gap-2 font-small">
                             <span className={simulationStep >= 3 ? "text-green font-bold" : "text-muted"}>
-                              {simulationStep >= 3 ? "✓" : "➔"} Step 3: Aligning budget levels against current Shivalik residential availability list.
+                              {simulationStep >= 3 ? "✓" : "➔"} Step 3: Aligning budget levels against current Ai RealEstate OS residential availability list.
                             </span>
                           </div>
                           <div className="flex align-center gap-2 font-small">
@@ -4107,7 +4107,7 @@ export default function CRM() {
                       </div>
                       <div className="chat-bubble chat-left">
                         <span className="block font-small mb-1 opacity-70">10:02 AM</span>
-                        <p>Hi, I am interested in booking a site tour of Shivalik Skyview unit 1201.</p>
+                        <p>Hi, I am interested in booking a site tour of Ai RealEstate OS Skyview unit 1201.</p>
                       </div>
                     </div>
 
@@ -4211,9 +4211,9 @@ export default function CRM() {
                 <div className="form-group col">
                   <label>Interested Project</label>
                   <select value={newLead.project} onChange={e => setNewLead({...newLead, project: e.target.value})}>
-                    <option value="Shivalik Skyview">Shivalik Skyview</option>
-                    <option value="Shivalik Highlife">Shivalik Highlife</option>
-                    <option value="Shivalik Edge">Shivalik Edge</option>
+                    <option value="Ai RealEstate OS Skyview">Ai RealEstate OS Skyview</option>
+                    <option value="Ai RealEstate OS Highlife">Ai RealEstate OS Highlife</option>
+                    <option value="Ai RealEstate OS Edge">Ai RealEstate OS Edge</option>
                   </select>
                 </div>
                 <div className="form-group col">
@@ -4288,7 +4288,7 @@ export default function CRM() {
           const locLabel = isSG ? 'SG Highway tech corridor' : isBopal ? 'Bopal eco-luxury belt' : isSat ? 'Satellite premium zone' : 'Ambawadi heritage district';
           const budgetCr = ((lead.budget || 20000000) / 10000000).toFixed(1);
           return {
-            opening: `"Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'} ${lead.name.split(' ')[0]}! This is [Your Name] from Shivalik Group. I'm reaching out because we've identified a stunning ${lead.bhkPreference || '3 BHK'} opportunity in ${locLabel} that fits your profile perfectly — I'd love to walk you through it in just 4 minutes."`,
+            opening: `"Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'} ${lead.name.split(' ')[0]}! This is [Your Name] from Ai RealEstate OS Group. I'm reaching out because we've identified a stunning ${lead.bhkPreference || '3 BHK'} opportunity in ${locLabel} that fits your profile perfectly — I'd love to walk you through it in just 4 minutes."`,
             qualifiers: [
               `"You mentioned interest in ${lead.bhkPreference || '3 BHK'} — are you prioritizing garden-facing or high-floor layouts for natural light?"`,
               `"Given your budget around ₹${budgetCr} Cr, would a flexible 10:90 payment plan make the decision easier for your family?"`,
@@ -4297,9 +4297,9 @@ export default function CRM() {
             objections: [
               { obj: '"The price is too high."', handle: `"I completely understand. The ₹${budgetCr} Cr bracket includes all GST, parking, and clubhouse dues — comparable units in ${locLabel} are 18% pricier. We also have a zero-interest 10:90 plan where you pay just 10% now."` },
               { obj: '"I need to think about it."', handle: `"Absolutely — I'd suggest we book a 30-min site visit while the specific east-facing unit on the 14th floor is still available. Inventory in ${locLabel} is at a 3-year low. Can we pencil in this Saturday?"` },
-              { obj: '"I\'m also looking at other builders."', handle: `"Smart approach! We welcome comparisons. Shivalik is the only RERA-compliant developer in ${locLabel} offering a 5-year maintenance-free package and a 24×7 concierge — that's our edge."` }
+              { obj: '"I\'m also looking at other builders."', handle: `"Smart approach! We welcome comparisons. Ai RealEstate OS is the only RERA-compliant developer in ${locLabel} offering a 5-year maintenance-free package and a 24×7 concierge — that's our edge."` }
             ],
-            closing: `"${lead.name.split(' ')[0]}, based on what you've told me today, I'm confident ${lead.project || 'Shivalik Skyview'} is the right fit. I'll send you our exclusive digital brochure right now and block a site visit slot. Does Saturday 11 AM work for you and your family?"`
+            closing: `"${lead.name.split(' ')[0]}, based on what you've told me today, I'm confident ${lead.project || 'Ai RealEstate OS Skyview'} is the right fit. I'll send you our exclusive digital brochure right now and block a site visit slot. Does Saturday 11 AM work for you and your family?"`
           };
         };
         const script = coachScriptGenerated[coachSelectedLeadId] || generateScript(coachLead);
@@ -4431,19 +4431,19 @@ export default function CRM() {
         const selectedCampaign = dripCampaigns.find(c => c.id === selectedCampaignId);
         const drip_sequences = {
           1: [
-            { day: 0, channel: 'WhatsApp', msg: `Hi [Name]! 👋 Welcome to Shivalik Group. We've curated a stunning [BHK] in [Location] just for your profile. View your exclusive brochure 👉 [link]`, status: 'sent' },
-            { day: 3, channel: 'WhatsApp', msg: `[Name], your dream home at Shivalik [Project] awaits 🏠 Did you get a chance to view the brochure? Our team is ready for an AR virtual walkthrough — just 15 mins!`, status: 'sent' },
-            { day: 7, channel: 'SMS', msg: `Shivalik Group: [Name], limited units remain in [Project]. Schedule your site visit today — exclusive buyer incentives valid this week only. Reply YES to confirm.`, status: 'pending' },
-            { day: 14, channel: 'WhatsApp', msg: `[Name], a quick note from your Shivalik advisor. Market data shows [Location] CAGR at 11.4% 📈 — your investment window is open. Shall we talk token booking?`, status: 'pending' }
+            { day: 0, channel: 'WhatsApp', msg: `Hi [Name]! 👋 Welcome to Ai RealEstate OS Group. We've curated a stunning [BHK] in [Location] just for your profile. View your exclusive brochure 👉 [link]`, status: 'sent' },
+            { day: 3, channel: 'WhatsApp', msg: `[Name], your dream home at Ai RealEstate OS [Project] awaits 🏠 Did you get a chance to view the brochure? Our team is ready for an AR virtual walkthrough — just 15 mins!`, status: 'sent' },
+            { day: 7, channel: 'SMS', msg: `Ai RealEstate OS Group: [Name], limited units remain in [Project]. Schedule your site visit today — exclusive buyer incentives valid this week only. Reply YES to confirm.`, status: 'pending' },
+            { day: 14, channel: 'WhatsApp', msg: `[Name], a quick note from your Ai RealEstate OS advisor. Market data shows [Location] CAGR at 11.4% 📈 — your investment window is open. Shall we talk token booking?`, status: 'pending' }
           ],
           2: [
-            { day: 0, channel: 'WhatsApp', msg: `Hi [Name] 🙏 Thank you for visiting Shivalik [Project] today! We hope you loved the panoramic views. I'm attaching our detailed spec sheet for your review.`, status: 'sent' },
+            { day: 0, channel: 'WhatsApp', msg: `Hi [Name] 🙏 Thank you for visiting Ai RealEstate OS [Project] today! We hope you loved the panoramic views. I'm attaching our detailed spec sheet for your review.`, status: 'sent' },
             { day: 1, channel: 'WhatsApp', msg: `[Name], our site team mentioned you had great chemistry with the 14th floor east-facing unit 😊 That specific unit is available for 3 more days. Want me to hold it?`, status: 'sent' },
-            { day: 4, channel: 'SMS', msg: `Shivalik Group: Hi [Name] — following your visit, our finance team has prepared a custom 10:90 payment structure for you. Shall I share it? Reply YES.`, status: 'pending' }
+            { day: 4, channel: 'SMS', msg: `Ai RealEstate OS Group: Hi [Name] — following your visit, our finance team has prepared a custom 10:90 payment structure for you. Shall I share it? Reply YES.`, status: 'pending' }
           ],
           3: [
-            { day: 0, channel: 'WhatsApp', msg: `[Name] 🔐 Token booking for your Shivalik unit is now OPEN. Lock in today's price with just ₹1,00,000 token — prices revise next week. Book now: [link]`, status: 'sent' },
-            { day: 2, channel: 'WhatsApp', msg: `Final reminder: [Name], 3 units left in your chosen configuration at Shivalik [Project]. Token amount is fully refundable within 7 days. Shall I proceed?`, status: 'sent' }
+            { day: 0, channel: 'WhatsApp', msg: `[Name] 🔐 Token booking for your Ai RealEstate OS unit is now OPEN. Lock in today's price with just ₹1,00,000 token — prices revise next week. Book now: [link]`, status: 'sent' },
+            { day: 2, channel: 'WhatsApp', msg: `Final reminder: [Name], 3 units left in your chosen configuration at Ai RealEstate OS [Project]. Token amount is fully refundable within 7 days. Shall I proceed?`, status: 'sent' }
           ]
         };
         const sequences = drip_sequences[selectedCampaignId] || [];
@@ -4671,7 +4671,7 @@ export default function CRM() {
           { id: 'prestige', name: 'Prestige Group', logo: '🎖', project: 'Prestige Falcon City', location: 'Bopal, West Ahmedabad', price: '₹6,800/sq.ft', possession: 'Jun 2027', amenities: ['Clubhouse', 'Court', 'Pool', 'Retail'], rera: 'Yes', rating: 4.2, ahmedabadProjects: 1, weakness: 'New entrant in Ahmedabad — limited local track record' },
           { id: 'sobha', name: 'Sobha Ltd', logo: '💎', project: 'Sobha Dream Acres', location: 'Gota, North Ahmedabad', price: '₹6,200/sq.ft', possession: 'Sep 2027', amenities: ['Garden', 'Pool', 'Gym', 'Kids Zone'], rera: 'Yes', rating: 4.0, ahmedabadProjects: 1, weakness: 'Located in North Ahmedabad — not central to premium zones' }
         ];
-        const shivalik = { name: 'Shivalik Group', price: '₹7,800/sq.ft', possession: 'Ready & Under Construction', rera: 'Yes ✓', rating: 4.6, localExperience: '28+ Years', maintenance: '5-Year Free', customisation: 'Full Layout', paymentPlan: '10:90 Available' };
+        const aiRealEstateOS = { name: 'Ai RealEstate OS Group', price: '₹7,800/sq.ft', possession: 'Ready & Under Construction', rera: 'Yes ✓', rating: 4.6, localExperience: '28+ Years', maintenance: '5-Year Free', customisation: 'Full Layout', paymentPlan: '10:90 Available' };
         return (
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
             <div>
@@ -4706,28 +4706,28 @@ export default function CRM() {
               ))}
             </div>
 
-            {/* Shivalik vs Competitor Table */}
+            {/* Ai RealEstate OS vs Competitor Table */}
             <div className="glass-card" style={{ padding: '24px', border: '1px solid rgba(212,175,55,0.2)' }}>
-              <h4 style={{ margin: '0 0 16px 0', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}><Trophy size={16} /> Shivalik vs {competitors.find(c => c.id === compSelectedProject)?.name} — Head-to-Head</h4>
+              <h4 style={{ margin: '0 0 16px 0', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}><Trophy size={16} /> Ai RealEstate OS vs {competitors.find(c => c.id === compSelectedProject)?.name} — Head-to-Head</h4>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr>
-                      {['Parameter', '🏆 Shivalik Group', competitors.find(c => c.id === compSelectedProject)?.name || 'Competitor'].map((h, i) => (
+                      {['Parameter', '🏆 Ai RealEstate OS Group', competitors.find(c => c.id === compSelectedProject)?.name || 'Competitor'].map((h, i) => (
                         <th key={i} style={{ padding: '10px 14px', textAlign: 'left', background: i === 1 ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.04)', color: i === 1 ? 'var(--color-accent)' : 'rgba(255,255,255,0.7)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', border: '1px solid rgba(255,255,255,0.06)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {[
-                      ['Avg Price/sq.ft', shivalik.price, competitors.find(c=>c.id===compSelectedProject)?.price],
-                      ['Rating', '⭐ '+shivalik.rating, '⭐ '+competitors.find(c=>c.id===compSelectedProject)?.rating],
-                      ['Possession', shivalik.possession, competitors.find(c=>c.id===compSelectedProject)?.possession],
-                      ['RERA Certified', '✅ '+shivalik.rera, '✅ '+competitors.find(c=>c.id===compSelectedProject)?.rera],
-                      ['Local Experience', shivalik.localExperience, 'Limited in Ahmedabad'],
-                      ['Maintenance Package', shivalik.maintenance, '—'],
-                      ['Layout Customisation', shivalik.customisation, 'Standard Only'],
-                      ['Payment Plan', shivalik.paymentPlan, 'Standard EMI']
+                      ['Avg Price/sq.ft', aiRealEstateOS.price, competitors.find(c=>c.id===compSelectedProject)?.price],
+                      ['Rating', '⭐ '+aiRealEstateOS.rating, '⭐ '+competitors.find(c=>c.id===compSelectedProject)?.rating],
+                      ['Possession', aiRealEstateOS.possession, competitors.find(c=>c.id===compSelectedProject)?.possession],
+                      ['RERA Certified', '✅ '+aiRealEstateOS.rera, '✅ '+competitors.find(c=>c.id===compSelectedProject)?.rera],
+                      ['Local Experience', aiRealEstateOS.localExperience, 'Limited in Ahmedabad'],
+                      ['Maintenance Package', aiRealEstateOS.maintenance, '—'],
+                      ['Layout Customisation', aiRealEstateOS.customisation, 'Standard Only'],
+                      ['Payment Plan', aiRealEstateOS.paymentPlan, 'Standard EMI']
                     ].map((row, i) => (
                       <tr key={i}>
                         <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.04)', fontSize: '12px', fontWeight: 'bold' }}>{row[0]}</td>
@@ -4740,14 +4740,14 @@ export default function CRM() {
               </div>
             </div>
 
-            {/* Shivalik Advantage Talking Points */}
+            {/* Ai RealEstate OS Advantage Talking Points */}
             <div className="glass-card" style={{ padding: '20px', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <h4 style={{ margin: '0 0 14px 0', color: '#10B981', display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={16} /> Your Shivalik Winning Pitch Points (vs {competitors.find(c=>c.id===compSelectedProject)?.name})</h4>
+              <h4 style={{ margin: '0 0 14px 0', color: '#10B981', display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={16} /> Your Ai RealEstate OS Winning Pitch Points (vs {competitors.find(c=>c.id===compSelectedProject)?.name})</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                 {[
                   `"28+ years of Ahmedabad-specific expertise — ${competitors.find(c=>c.id===compSelectedProject)?.name} is still new here."`,
                   '"5-year maintenance-free promise — zero hidden charges after possession."',
-                  '"10:90 payment plan means you own a Shivalik home with just 10% upfront today."',
+                  '"10:90 payment plan means you own a Ai RealEstate OS home with just 10% upfront today."',
                   '"Our RERA rating is 4.6 — highest in the ${(compSelectedProject === \'adani\' ? \'SG Highway\' : \'Ahmedabad\')} zone."',
                   '"Full layout customisation — choose your kitchen finish, flooring, and bathroom tiles."'
                 ].map((pt, i) => (

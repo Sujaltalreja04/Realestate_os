@@ -5,7 +5,7 @@ const INITIAL_LEADS = [
     name: "Rahul Sharma",
     phone: "+91 98765 43210",
     email: "rahul.s@example.com",
-    project: "Shivalik Skyview",
+    project: "Ai RealEstate OS Skyview",
     score: 92,
     status: "Negotiation",
     action: "Follow up on pricing",
@@ -26,7 +26,7 @@ const INITIAL_LEADS = [
     name: "Priya Patel",
     phone: "+91 98222 11100",
     email: "priya.p@example.com",
-    project: "Shivalik Highlife",
+    project: "Ai RealEstate OS Highlife",
     score: 85,
     status: "Site Visit Scheduled",
     action: "Schedule AR Tour",
@@ -47,7 +47,7 @@ const INITIAL_LEADS = [
     name: "Amit Desai",
     phone: "+91 99888 77665",
     email: "amit.d@example.com",
-    project: "Shivalik Skyview",
+    project: "Ai RealEstate OS Skyview",
     score: 78,
     status: "Contacted",
     action: "Send brochure",
@@ -68,7 +68,7 @@ const INITIAL_LEADS = [
     name: "Neha Gupta",
     phone: "+91 91234 56789",
     email: "neha.g@example.com",
-    project: "Shivalik Highlife",
+    project: "Ai RealEstate OS Highlife",
     score: 65,
     status: "New Lead",
     action: "Call back next week",
@@ -89,7 +89,7 @@ const INITIAL_LEADS = [
     name: "Vikram Singh",
     phone: "+91 90000 11223",
     email: "vikram.s@example.com",
-    project: "Shivalik Edge",
+    project: "Ai RealEstate OS Edge",
     score: 45,
     status: "Closed/Lost",
     action: "Add to nurture campaign",
@@ -116,7 +116,7 @@ const INITIAL_ACTIVITY = [
 
 const INITIAL_PROPERTIES = [
   { 
-    name: "Shivalik Skyview", 
+    name: "Ai RealEstate OS Skyview", 
     location: "Ambawadi", 
     price: 25000000, 
     bhk: "3 & 4 BHK", 
@@ -124,14 +124,14 @@ const INITIAL_PROPERTIES = [
     image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80", 
     completion: "Dec 2026", 
     stats: { views: 1245, inquiries: 84, trend: "+12%" },
-    builder: "Shivalik Group",
+    builder: "Ai RealEstate OS Group",
     reraNumber: "PR/GJ/AHMEDABAD/AUDA/CAA00123/251226",
     amenities: ["Rooftop Garden", "Infinite Pool", "Double-Height Lounge", "Yoga Sanctuary"],
     brochure: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     virtualTour: "https://demo.virtualtour.com/skyview"
   },
   { 
-    name: "Shivalik Highlife", 
+    name: "Ai RealEstate OS Highlife", 
     location: "SG Highway", 
     price: 18000000, 
     bhk: "3 BHK", 
@@ -139,14 +139,14 @@ const INITIAL_PROPERTIES = [
     image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80", 
     completion: "Ready", 
     stats: { views: 3420, inquiries: 215, trend: "+5%" },
-    builder: "Shivalik Group",
+    builder: "Ai RealEstate OS Group",
     reraNumber: "PR/GJ/AHMEDABAD/AUDA/CAA00456/150124",
     amenities: ["Clubhouse Lounge", "Gymnasium", "Children Play Area", "Cricket Pitch"],
     brochure: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     virtualTour: "https://demo.virtualtour.com/highlife"
   },
   { 
-    name: "Shivalik Edge", 
+    name: "Ai RealEstate OS Edge", 
     location: "Bopal", 
     price: 12000000, 
     bhk: "2 & 3 BHK", 
@@ -154,7 +154,7 @@ const INITIAL_PROPERTIES = [
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80", 
     completion: "Mar 2027", 
     stats: { views: 890, inquiries: 45, trend: "+28%" },
-    builder: "Shivalik Group",
+    builder: "Ai RealEstate OS Group",
     reraNumber: "PR/GJ/AHMEDABAD/AUDA/CAA00789/300327",
     amenities: ["Co-working Space", "Electric Vehicle Chargers", "Jogging Track", "Mini Theater"],
     brochure: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
@@ -269,10 +269,10 @@ const INITIAL_INVENTORY = [
 
 const INITIAL_BUILDERS = [
   {
-    name: "Shivalik Group",
-    company: "Shivalik Projects Limited",
+    name: "Ai RealEstate OS Group",
+    company: "Ai RealEstate OS Projects Limited",
     contact: "+91 79 3500 1100",
-    activeProjects: ["Shivalik Skyview", "Shivalik Highlife", "Shivalik Edge"],
+    activeProjects: ["Ai RealEstate OS Skyview", "Ai RealEstate OS Highlife", "Ai RealEstate OS Edge"],
     commissionAgreement: "2.5% commission payout. 1% upon execution of allotment letter, 1.5% upon registration."
   },
   {

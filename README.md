@@ -1,4 +1,4 @@
-# 🏢 Shivalik AI Property Experience & CRM Platform
+# 🏢 Ai RealEstate OS - Property Experience & CRM Platform
 
 India's first AI & AR-driven property discovery, 3D interactive visualization, and full-stack CRM intelligence portal designed for modern home buyers, brokers, and developers.
 
@@ -11,10 +11,10 @@ Below is the real-time simulation output of the **3D Room Customizer and Interio
 
 ![3D Luxury Interior Style](public/interior_luxury.png)
 
-### 🌇 Shivalik Residential High-Rise Portfolios
+### 🌇 Ai RealEstate OS Residential High-Rise Portfolios
 Experience structural height mappings, sunlight ratings, and interactive walk-through vacancies inside our featured properties:
 
-![Shivalik Skyview Tower](public/skyview.png)
+![Ai RealEstate OS Skyview Tower](public/skyview.png)
 
 ---
 
@@ -51,8 +51,8 @@ Experience structural height mappings, sunlight ratings, and interactive walk-th
 
 ### 1. Clone & Install Packages
 ```bash
-git clone https://github.com/Sujaltalreja04/Shivalik.git
-cd "shivalik group"
+git clone https://github.com/Sujaltalreja04/ai-realestate-os.git
+cd "ai-realestate-os"
 npm install
 ```
 

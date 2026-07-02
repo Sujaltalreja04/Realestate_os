@@ -67,7 +67,7 @@ const INITIAL_DATABASE = {
   projects: [
     {
       id: "skyview",
-      name: "Shivalik Skyview",
+      name: "Ai RealEstate OS Skyview",
       location: "Ambawadi",
       bhk: [3, 4],
       price: 18500000, // 1.85 Cr
@@ -84,7 +84,7 @@ const INITIAL_DATABASE = {
     },
     {
       id: "highlife",
-      name: "Shivalik Highlife",
+      name: "Ai RealEstate OS Highlife",
       location: "SG Highway",
       bhk: [3],
       price: 12500000, // 1.25 Cr
@@ -101,7 +101,7 @@ const INITIAL_DATABASE = {
     },
     {
       id: "greenwoods",
-      name: "Shivalik Greenwoods",
+      name: "Ai RealEstate OS Greenwoods",
       location: "Bopal",
       bhk: [4, 5],
       price: 32000000, // 3.2 Cr
@@ -127,10 +127,10 @@ const INITIAL_DATABASE = {
 };
 
 const PROPERTY_SCORES = {
-  "Shivalik Skyview": { sunlightScore: 8.5, noiseScore: 2.1, investmentScore: 8.8, livabilityScore: 9.2 },
-  "Shivalik Highlife": { sunlightScore: 7.8, noiseScore: 3.5, investmentScore: 9.4, livabilityScore: 8.5 },
-  "Shivalik Edge": { sunlightScore: 9.0, noiseScore: 1.5, investmentScore: 9.2, livabilityScore: 9.4 },
-  "Shivalik Greenwoods": { sunlightScore: 9.5, noiseScore: 1.2, investmentScore: 9.0, livabilityScore: 9.6 }
+  "Ai RealEstate OS Skyview": { sunlightScore: 8.5, noiseScore: 2.1, investmentScore: 8.8, livabilityScore: 9.2 },
+  "Ai RealEstate OS Highlife": { sunlightScore: 7.8, noiseScore: 3.5, investmentScore: 9.4, livabilityScore: 8.5 },
+  "Ai RealEstate OS Edge": { sunlightScore: 9.0, noiseScore: 1.5, investmentScore: 9.2, livabilityScore: 9.4 },
+  "Ai RealEstate OS Greenwoods": { sunlightScore: 9.5, noiseScore: 1.2, investmentScore: 9.0, livabilityScore: 9.6 }
 };
 
 const ARCH_SCENARIOS = {
@@ -255,7 +255,7 @@ export default function App() {
   const [activeBuyerPersonaId, setActiveBuyerPersonaId] = useState("");
   const [showGate, setShowGate] = useState(() => {
     if (typeof window !== 'undefined') {
-      return !localStorage.getItem('shivalik_portal_selected');
+      return !localStorage.getItem('ai_realestate_os_portal_selected');
     }
     return true;
   });
@@ -276,14 +276,14 @@ export default function App() {
   // Township explorer states
   const [selectedTower, setSelectedTower] = useState(null);
   const [selectedAmenity, setSelectedAmenity] = useState(null);
-  const [narrationText, setNarrationText] = useState("Welcome to Shivalik Premium Township Discoverer. Click any building on the left to activate physical metrics and AI insights.");
+  const [narrationText, setNarrationText] = useState("Welcome to Ai RealEstate OS Premium Township Discoverer. Click any building on the left to activate physical metrics and AI insights.");
   const [buildingViewTower, setBuildingViewTower] = useState(null); // null = township, else = inside tower
 
   // Chatbot states
   const [chatMessages, setChatMessages] = useState([
     { 
       sender: "bot", 
-      text: "Greetings! I am the Shivalik AI Advisor. How can I help you find your dream property today? You can select any prompt from the sidebar or type your query below."
+      text: "Greetings! I am the Ai RealEstate OS AI Advisor. How can I help you find your dream property today? You can select any prompt from the sidebar or type your query below."
     }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -355,7 +355,7 @@ export default function App() {
   // Floating Chat Widget states
   const [floatingChatOpen, setFloatingChatOpen] = useState(false);
   const [floatingMessages, setFloatingMessages] = useState([
-    { sender: "bot", text: "Hi! How can I help you discover Shivalik properties? You can ask me questions about BHKs, amenities, or pricing." }
+    { sender: "bot", text: "Hi! How can I help you discover Ai RealEstate OS properties? You can ask me questions about BHKs, amenities, or pricing." }
   ]);
   const [floatingInput, setFloatingInput] = useState("");
 
@@ -368,9 +368,9 @@ export default function App() {
   const [activePresetMatch, setActivePresetMatch] = useState("");
   const [selectedProjectDetails, setSelectedProjectDetails] = useState(null);
 
-  // Shivalik Copilot states
+  // Ai RealEstate OS Copilot states
   const [copilotHistory, setCopilotHistory] = useState([
-    { role: "assistant", content: "Hello! I am Shivalik Copilot, your advanced real-time AI architectural assistant. I can parse blueprint layouts, compare sunlight values, check RERA registration documents, and estimate appreciation CAGRs. Ask me anything about Shivalik properties!" }
+    { role: "assistant", content: "Hello! I am Ai RealEstate OS Copilot, your advanced real-time AI architectural assistant. I can parse blueprint layouts, compare sunlight values, check RERA registration documents, and estimate appreciation CAGRs. Ask me anything about Ai RealEstate OS properties!" }
   ]);
   const [copilotInput, setCopilotInput] = useState("");
   const [copilotStreamingText, setCopilotStreamingText] = useState("");
@@ -483,7 +483,7 @@ export default function App() {
         },
         body: JSON.stringify({
           messages: [
-            { role: "system", content: "You are Shivalik Copilot, an elite AI Real Estate Advisor for Shivalik Group in Ahmedabad. Provide extremely precise details on Sunlight Indexes, CAGR appreciation growth, layouts, construction, and neighborhood infrastructure. Be concise, polite, and structure output with bullet points where necessary." },
+            { role: "system", content: "You are Ai RealEstate OS Copilot, an elite AI Real Estate Advisor for Ai RealEstate OS Group in Ahmedabad. Provide extremely precise details on Sunlight Indexes, CAGR appreciation growth, layouts, construction, and neighborhood infrastructure. Be concise, polite, and structure output with bullet points where necessary." },
             ...updatedHistory.map(h => ({ role: h.role, content: h.content }))
           ],
           model: "openai/gpt-oss-20b",
@@ -555,21 +555,21 @@ export default function App() {
       const msgLower = userMessage.toLowerCase();
       
       if (msgLower.includes("hvac") || msgLower.includes("ventilation") || msgLower.includes("duct")) {
-        mockReply = "**Shivalik CAD-Copilot Response**:\n\n- **VRV System Loaded**: I have activated the **HVAC Duct Network** layer (green dashed paths) in your active AutoCAD blueprint viewport.\n- **Air Changes**: The master bedroom receives 8 air changes per hour (ACH) via dedicated ceiling diffusers.\n- **Return Air**: Return air grills are situated in bathroom transition corridors to optimize pressure balances.";
+        mockReply = "**Ai RealEstate OS CAD-Copilot Response**:\n\n- **VRV System Loaded**: I have activated the **HVAC Duct Network** layer (green dashed paths) in your active AutoCAD blueprint viewport.\n- **Air Changes**: The master bedroom receives 8 air changes per hour (ACH) via dedicated ceiling diffusers.\n- **Return Air**: Return air grills are situated in bathroom transition corridors to optimize pressure balances.";
       } else if (msgLower.includes("structural") || msgLower.includes("pillar") || msgLower.includes("load-bearing") || msgLower.includes("column")) {
-        mockReply = "**Shivalik CAD-Copilot Response**:\n\n- **Structural Pillars Overlay**: I have isolated the **Structural Load Pillars** (red-glowing RC pillars) on the canvas.\n- **Load Capacity**: Columns on the inner core support up to 80-120 tons of structural load. They are constructed with M40 grade reinforced concrete.\n- **Seismic Design**: Fully compliant with IS 1893 (Zone 3) building codes for earthquake safety.";
+        mockReply = "**Ai RealEstate OS CAD-Copilot Response**:\n\n- **Structural Pillars Overlay**: I have isolated the **Structural Load Pillars** (red-glowing RC pillars) on the canvas.\n- **Load Capacity**: Columns on the inner core support up to 80-120 tons of structural load. They are constructed with M40 grade reinforced concrete.\n- **Seismic Design**: Fully compliant with IS 1893 (Zone 3) building codes for earthquake safety.";
       } else if (msgLower.includes("dimension") || msgLower.includes("area") || msgLower.includes("size") || msgLower.includes("measure")) {
-        mockReply = "**Shivalik CAD-Copilot Response**:\n\n- **Dimensions Activated**: **Dimension Guidelines** (gold lines) are enabled.\n- **Key Rooms**:\n  * *Living Room*: 22 x 18 ft (396 sq.ft.)\n  * *Master Bed*: 14 x 16 ft (440 sq.ft.)\n  * *Total Carpet Area*: 1,540 sq.ft.\n- **Ruler Tool**: You can also use the **Ruler Measure** tool in the toolbar to click and inspect custom spans.";
+        mockReply = "**Ai RealEstate OS CAD-Copilot Response**:\n\n- **Dimensions Activated**: **Dimension Guidelines** (gold lines) are enabled.\n- **Key Rooms**:\n  * *Living Room*: 22 x 18 ft (396 sq.ft.)\n  * *Master Bed*: 14 x 16 ft (440 sq.ft.)\n  * *Total Carpet Area*: 1,540 sq.ft.\n- **Ruler Tool**: You can also use the **Ruler Measure** tool in the toolbar to click and inspect custom spans.";
       } else if (msgLower.includes("electrical") || msgLower.includes("wiring") || msgLower.includes("socket") || msgLower.includes("switch")) {
-        mockReply = "**Shivalik CAD-Copilot Response**:\n\n- **Electrical Grid Loaded**: The **Electrical Lighting Grid** (cyan neon paths) is overlaid on the layout.\n- **DB Panel**: The 3-phase distribution board is located in the living foyer.\n- **Automation**: Fully pre-wired for central home automation gateways and smart ambient dimmer panels.";
+        mockReply = "**Ai RealEstate OS CAD-Copilot Response**:\n\n- **Electrical Grid Loaded**: The **Electrical Lighting Grid** (cyan neon paths) is overlaid on the layout.\n- **DB Panel**: The 3-phase distribution board is located in the living foyer.\n- **Automation**: Fully pre-wired for central home automation gateways and smart ambient dimmer panels.";
       } else if (msgLower.includes("plumbing") || msgLower.includes("water") || msgLower.includes("pipe") || msgLower.includes("drain")) {
-        mockReply = "**Shivalik CAD-Copilot Response**:\n\n- **Plumbing Pipeline Flows**: I have enabled the **Plumbing Pipeline** layer showing Hot Water lines (red) and Cold Water lines (blue).\n- **Riser Connection**: Connects to the main plumbing shaft behind the modular kitchen, isolating sound vibration away from bedrooms.";
+        mockReply = "**Ai RealEstate OS CAD-Copilot Response**:\n\n- **Plumbing Pipeline Flows**: I have enabled the **Plumbing Pipeline** layer showing Hot Water lines (red) and Cold Water lines (blue).\n- **Riser Connection**: Connects to the main plumbing shaft behind the modular kitchen, isolating sound vibration away from bedrooms.";
       } else if (userMessage.toLowerCase().includes("sunlight")) {
-        mockReply = "**Shivalik Copilot Contextual Response**:\n\n- **Shivalik Edge** (Bopal): Sunlight Index **9.0/10**. Outstanding peak noon natural light exposure.\n- **Shivalik Skyview** (Ambawadi): Sunlight Index **8.5/10**. Optimized East-facing solar layouts.\n- **Shivalik Highlife** (SG Highway): Sunlight Index **7.8/10**. Highrise shade structures designed for thermal comfort.\n\n*Note: Falling back to local offline knowledge indexes due to API connectivity status.*";
+        mockReply = "**Ai RealEstate OS Copilot Contextual Response**:\n\n- **Ai RealEstate OS Edge** (Bopal): Sunlight Index **9.0/10**. Outstanding peak noon natural light exposure.\n- **Ai RealEstate OS Skyview** (Ambawadi): Sunlight Index **8.5/10**. Optimized East-facing solar layouts.\n- **Ai RealEstate OS Highlife** (SG Highway): Sunlight Index **7.8/10**. Highrise shade structures designed for thermal comfort.\n\n*Note: Falling back to local offline knowledge indexes due to API connectivity status.*";
       } else if (userMessage.toLowerCase().includes("roi") || userMessage.toLowerCase().includes("cagr") || userMessage.toLowerCase().includes("appreciation")) {
-        mockReply = "**Shivalik Copilot Contextual Response**:\n\n- **Shivalik Edge** (Bopal): Appreciation CAGR **14.2%** (glowing launch phase).\n- **Shivalik Highlife** (SG Highway): Appreciation CAGR **13.5%** (robust rental zone yield).\n- **Shivalik Skyview** (Ambawadi): Appreciation CAGR **13.2%** (stable luxury core).\n\n*Note: Falling back to local offline knowledge indexes due to API connectivity status.*";
+        mockReply = "**Ai RealEstate OS Copilot Contextual Response**:\n\n- **Ai RealEstate OS Edge** (Bopal): Appreciation CAGR **14.2%** (glowing launch phase).\n- **Ai RealEstate OS Highlife** (SG Highway): Appreciation CAGR **13.5%** (robust rental zone yield).\n- **Ai RealEstate OS Skyview** (Ambawadi): Appreciation CAGR **13.2%** (stable luxury core).\n\n*Note: Falling back to local offline knowledge indexes due to API connectivity status.*";
       } else {
-        mockReply = `**Shivalik Copilot Local Agent Response**:\n\nI received your query: "${userMessage}".\n\nTo coordinate a detailed walkthrough, review physical floorplan blueprints, or configure custom layouts, navigate to the respective tabs: **3D Township Explorer** or **Property Visualization**.\n\n*Connection Status: Offline Simulation Active. Live API Key loaded successfully.*`;
+        mockReply = `**Ai RealEstate OS Copilot Local Agent Response**:\n\nI received your query: "${userMessage}".\n\nTo coordinate a detailed walkthrough, review physical floorplan blueprints, or configure custom layouts, navigate to the respective tabs: **3D Township Explorer** or **Property Visualization**.\n\n*Connection Status: Offline Simulation Active. Live API Key loaded successfully.*`;
       }
 
       // Simulate a quick streaming effect for fallback mockup
@@ -609,15 +609,15 @@ export default function App() {
     setSelectedAmenity(null);
     const dataMap = {
       'A': {
-        project: "Shivalik Skyview",
+        project: "Ai RealEstate OS Skyview",
         narrative: "Tower A offers premium East-facing 3 BHK apartments. Out of 40 total units, 14 remain available, carrying an impressive average sunlight exposure index of 8.5/10."
       },
       'B': {
-        project: "Shivalik Skyview",
+        project: "Ai RealEstate OS Skyview",
         narrative: "Tower B consists of our luxury 4 BHK duplex penthouses. Moving at 22% faster rates due to direct garden views and automated kitchen spaces."
       },
       'C': {
-        project: "Shivalik Highlife",
+        project: "Ai RealEstate OS Highlife",
         narrative: "Tower C houses our premium compact 3 BHK residences on SG Highway. Currently under construction, offering high rental yields."
       }
     };
@@ -632,7 +632,7 @@ export default function App() {
     setSelectedTower(null);
     let text = "";
     if (name === "Clubhouse Pool") {
-      text = "The Swimming Pool features an Olympic-sized layout with a controlled heating facility. Open to all Shivalik Club members, running daily filtration cycles.";
+      text = "The Swimming Pool features an Olympic-sized layout with a controlled heating facility. Open to all Ai RealEstate OS Club members, running daily filtration cycles.";
     } else {
       text = "Our Club Gym is equipped with luxury high-end weights and wellness cardio decks. Also features a dedicated indoor squash arena and shared coworking zone.";
     }
@@ -719,11 +719,11 @@ export default function App() {
           </div>
         );
       } else if (text.includes("sunlight")) {
-        response = "Our physical orientation models highlight **Tower A - Floor 8 and above** as the layout receiving maximum sunlight (approx 8.5 hours/day). **Shivalik Greenwoods** villas lead sunlight indices with 9.5/10.";
+        response = "Our physical orientation models highlight **Tower A - Floor 8 and above** as the layout receiving maximum sunlight (approx 8.5 hours/day). **Ai RealEstate OS Greenwoods** villas lead sunlight indices with 9.5/10.";
       } else if (text.includes("investment")) {
         response = "The unit carrying the highest appreciation score is **Highlife - 1401 (14th Floor)** carrying a score of **9.5/10** due to new SG Highway metro linkages.";
       } else if (text.includes("schools")) {
-        response = "For **Shivalik Skyview (Ambawadi)**, the following high-end educational facilities are within a 3km radius:\n" +
+        response = "For **Ai RealEstate OS Skyview (Ambawadi)**, the following high-end educational facilities are within a 3km radius:\n" +
           "- The Riverside School (1.8 km)\n" +
           "- Ahmedabad International School (2.2 km)\n" +
           "- St. Xavier's Loyola Hall (2.8 km)";
@@ -951,7 +951,7 @@ export default function App() {
   const handleExecAI = (q) => {
     let ans = "";
     if (q.includes("bookings")) {
-      ans = "<strong>Answer:</strong> <strong>Shivalik Highlife</strong> generated the highest bookings volume (42 units) this period.\n\n" +
+      ans = "<strong>Answer:</strong> <strong>Ai RealEstate OS Highlife</strong> generated the highest bookings volume (42 units) this period.\n\n" +
         "<strong>Root Cause Analysis:</strong> Lower acquisition cost (starting ₹1.25 Cr) coupled with proximity to the new commercial metro corridor drives volume conversion.\n\n" +
         "<strong>Recommendation:</strong> Allocate 45% of Q3 marketing budget to Highlife. Increase pricing parameters by 3% on high floors starting next week.";
     } else if (q.includes("unsold")) {
@@ -1148,7 +1148,7 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // Shivalik Copilot Graph Mode Chart rendering
+  // Ai RealEstate OS Copilot Graph Mode Chart rendering
   useEffect(() => {
     if (activeTab === "copilot" && copilotGraphMode && copilotChartRef.current) {
       // Destroy existing instance
@@ -1171,7 +1171,7 @@ export default function App() {
             labels: ["Sunlight Index", "Investment Score", "Quietness", "Livability Score"],
             datasets: [
               {
-                label: "Shivalik Skyview",
+                label: "Ai RealEstate OS Skyview",
                 data: [8.5, 8.8, 7.9, 9.2],
                 backgroundColor: "rgba(245, 158, 11, 0.15)",
                 borderColor: goldColor,
@@ -1179,7 +1179,7 @@ export default function App() {
                 borderWidth: 2
               },
               {
-                label: "Shivalik Highlife",
+                label: "Ai RealEstate OS Highlife",
                 data: [7.8, 9.4, 6.5, 8.5],
                 backgroundColor: "rgba(16, 185, 129, 0.15)",
                 borderColor: secondaryColor,
@@ -1187,7 +1187,7 @@ export default function App() {
                 borderWidth: 2
               },
               {
-                label: "Shivalik Edge",
+                label: "Ai RealEstate OS Edge",
                 data: [9.0, 9.2, 8.5, 9.4],
                 backgroundColor: "rgba(59, 130, 246, 0.15)",
                 borderColor: tertiaryColor,
@@ -1220,7 +1220,7 @@ export default function App() {
         copilotChartInstance.current = new Chart(ctx, {
           type: "bar",
           data: {
-            labels: ["Shivalik Skyview", "Shivalik Highlife", "Shivalik Edge"],
+            labels: ["Ai RealEstate OS Skyview", "Ai RealEstate OS Highlife", "Ai RealEstate OS Edge"],
             datasets: [
               {
                 label: "Starting Price (₹ Cr)",
@@ -1251,7 +1251,7 @@ export default function App() {
         copilotChartInstance.current = new Chart(ctx, {
           type: "line",
           data: {
-            labels: ["Shivalik Skyview", "Shivalik Highlife", "Shivalik Edge"],
+            labels: ["Ai RealEstate OS Skyview", "Ai RealEstate OS Highlife", "Ai RealEstate OS Edge"],
             datasets: [
               {
                 label: "Appreciation CAGR Projections (%)",
@@ -1370,7 +1370,7 @@ export default function App() {
     setRole(selectedRole);
     setActiveTab(tabName);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('shivalik_portal_selected', 'true');
+      localStorage.setItem('ai_realestate_os_portal_selected', 'true');
     }
     setShowGate(false);
   };
@@ -1419,7 +1419,7 @@ export default function App() {
               Select Workspace
             </h2>
             <p style={{ fontSize: '13.5px', color: '#CBD5E1', maxWidth: '480px', margin: '0 auto 28px auto', lineHeight: 1.5, fontFamily: 'var(--font-body)' }}>
-              Choose your dedicated workspace to experience the Shivalik Group virtual portal environment:
+              Choose your dedicated workspace to experience the Ai RealEstate OS Group virtual portal environment:
             </p>
 
             <div style={{
@@ -1462,7 +1462,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Option 2: Shivalik CoPilot */}
+              {/* Option 2: Ai RealEstate OS CoPilot */}
               <div 
                 onClick={() => selectPortalMode('buyer', 'copilot')}
                 style={{
@@ -1491,7 +1491,7 @@ export default function App() {
               >
                 <div style={{ fontSize: '26px' }}>🤖</div>
                 <div>
-                  <h4 style={{ margin: '0 0 3px 0', color: 'var(--color-accent)', fontSize: '14.5px', fontWeight: 700 }}>Shivalik CoPilot</h4>
+                  <h4 style={{ margin: '0 0 3px 0', color: 'var(--color-accent)', fontSize: '14.5px', fontWeight: 700 }}>Ai RealEstate OS CoPilot</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: '#94A3B8' }}>Advanced AI architectural assistant, sunlight calculator, blueprint analyser.</p>
                 </div>
               </div>
@@ -1545,7 +1545,7 @@ export default function App() {
         <div className="sidebar-header">
           <div className="logo-icon">S</div>
           <div className="logo-text">
-            <h1>SHIVALIK AI</h1>
+            <h1>AI REALESTATE OS</h1>
             <span className="logo-sub">Property Experience</span>
           </div>
         </div>
@@ -1612,7 +1612,7 @@ export default function App() {
                 setActiveTab('copilot');
                 setSelectedProjectDetails(null);
               }}>
-                <Bot className="text-gold" /> Shivalik Copilot
+                <Bot className="text-gold" /> Ai RealEstate OS Copilot
               </a>
               <a href="#interior" className={`nav-item ${activeTab === 'interior' ? 'active' : ''}`} onClick={() => setActiveTab('interior')}>
                 <Paintbrush /> AI Interior Designer
@@ -1680,7 +1680,7 @@ export default function App() {
               {activeTab === "visualize" && "Property Visualization"}
               {activeTab === "3d-township" && "3D Township & Site Explorer"}
               {activeTab === "ai-advisor" && "AI Property Advisor Consultant"}
-              {activeTab === "copilot" && "Shivalik Copilot AI Workspace"}
+              {activeTab === "copilot" && "Ai RealEstate OS Copilot AI Workspace"}
               {activeTab === "compare" && "Property Comparison Matrix"}
               {activeTab === "ar-viewer" && "Boardroom AR/VR Pitch Center"}
               {activeTab === "interior" && "AI Real 3D Interior designer"}
@@ -1768,7 +1768,7 @@ export default function App() {
                       </div>
 
                       <p className="details-full-description">
-                        Experience elite living at {selectedProjectDetails.name}. Developed by {selectedProjectDetails.builder || "Shivalik Group"}, this premium real estate asset represents a milestone in contemporary design and high-end residential engineering in the prime {selectedProjectDetails.location} sector. Walk through vector layouts, sync sunlight orientations, or run virtual simulator tours.
+                        Experience elite living at {selectedProjectDetails.name}. Developed by {selectedProjectDetails.builder || "Ai RealEstate OS Group"}, this premium real estate asset represents a milestone in contemporary design and high-end residential engineering in the prime {selectedProjectDetails.location} sector. Walk through vector layouts, sync sunlight orientations, or run virtual simulator tours.
                       </p>
 
                       <div className="details-meta-grid">
@@ -1880,7 +1880,7 @@ export default function App() {
                       <div className="glass-card details-booking-card">
                         <div className="booking-card-header">
                           <h3>Schedule a Site Tour</h3>
-                          <p className="text-muted font-small">Select date and fill credentials to coordinate a physical site visit with a Shivalik Executive.</p>
+                          <p className="text-muted font-small">Select date and fill credentials to coordinate a physical site visit with a Ai RealEstate OS Executive.</p>
                         </div>
 
                         <form onSubmit={(e) => {
@@ -1957,7 +1957,7 @@ export default function App() {
                   {/* Split Hero Banner */}
                   <div className="hero-banner-new">
                     <div className="hero-left-pane">
-                      <span className="hero-tag-premium">SHIVALIK GROUP INNOVATION</span>
+                      <span className="hero-tag-premium">AI REALESTATE OS GROUP INNOVATION</span>
                       <h1 className="hero-title-premium">Find Your Future Home with <span className="gradient-gold-text">AI Intelligence</span></h1>
                       <p className="hero-desc-premium">Experience India's first AI & AR-driven property discovery platform. Walk through floorplans, customize interiors, and identify premium investment potentials from the comfort of your couch.</p>
                       <div className="hero-actions-row-premium">
@@ -2225,7 +2225,7 @@ export default function App() {
 
                   {/* Projects Title */}
                   <div className="section-header-row">
-                    <h2>Featured Shivalik Projects</h2>
+                    <h2>Featured Ai RealEstate OS Projects</h2>
                     <span className="text-muted">Showing simulated premium portfolio</span>
                   </div>
                   
@@ -2418,7 +2418,7 @@ export default function App() {
             </div>
           )}
 
-          {/* 1.3 SHIVALIK COPILOT WORKSPACE */}
+          {/* 1.3 AI REALESTATE OS COPILOT WORKSPACE */}
           {activeTab === "copilot" && (
             <div className="tab-content copilot-workspace-container">
               <div className={`copilot-grid-layout ${copilotGraphMode ? 'split' : 'full-width'}`}>
@@ -2428,7 +2428,7 @@ export default function App() {
                     <div className="flex align-center gap-2">
                       <div className="copilot-pulse-dot active animate-pulse"></div>
                       <div>
-                        <h3>Shivalik Copilot Console</h3>
+                        <h3>Ai RealEstate OS Copilot Console</h3>
                         <span className="text-muted font-small">Powered by gpt-oss-20b</span>
                       </div>
                     </div>
@@ -2474,7 +2474,7 @@ export default function App() {
                         style={{ fontSize: '11px', padding: '4px 8px', whiteSpace: 'nowrap' }}
                         onClick={() => {
                           setCopilotHistory([
-                            { role: "assistant", content: "Hello! I am Shivalik Copilot, your advanced real-time AI architectural assistant. I can parse blueprint layouts, compare sunlight values, check RERA registration documents, and estimate appreciation CAGRs. Ask me anything about Shivalik properties!" }
+                            { role: "assistant", content: "Hello! I am Ai RealEstate OS Copilot, your advanced real-time AI architectural assistant. I can parse blueprint layouts, compare sunlight values, check RERA registration documents, and estimate appreciation CAGRs. Ask me anything about Ai RealEstate OS properties!" }
                           ]);
                           triggerTelemetry("copilot_clear", "Cleared chat console history");
                         }}
@@ -2492,7 +2492,7 @@ export default function App() {
                         </div>
                         <div className="copilot-chat-bubble">
                           <div className="copilot-bubble-sender">
-                            {msg.role === "assistant" ? "Shivalik Copilot Agent" : "System User / Developer"}
+                            {msg.role === "assistant" ? "Ai RealEstate OS Copilot Agent" : "System User / Developer"}
                           </div>
                           <div className="copilot-bubble-content">
                             {msg.content.split("\n").map((line, i) => (
@@ -2508,7 +2508,7 @@ export default function App() {
                       <div className="copilot-chat-bubble-wrapper assistant streaming">
                         <div className="copilot-bubble-avatar">🤖</div>
                         <div className="copilot-chat-bubble">
-                          <div className="copilot-bubble-sender">Shivalik Copilot Agent <span className="streaming-indicator">typing...</span></div>
+                          <div className="copilot-bubble-sender">Ai RealEstate OS Copilot Agent <span className="streaming-indicator">typing...</span></div>
                           <div className="copilot-bubble-content">
                             {copilotStreamingText.split("\n").map((line, i) => (
                               <p key={i} style={{ margin: '4px 0' }}>{line}</p>
@@ -2522,7 +2522,7 @@ export default function App() {
                       <div className="copilot-chat-bubble-wrapper assistant typing-loader">
                         <div className="copilot-bubble-avatar">🤖</div>
                         <div className="copilot-chat-bubble">
-                          <div className="copilot-bubble-sender">Shivalik Copilot Agent</div>
+                          <div className="copilot-bubble-sender">Ai RealEstate OS Copilot Agent</div>
                           <div className="copilot-bubble-content">
                             <span className="dot-loader">.</span>
                             <span className="dot-loader" style={{ animationDelay: '0.2s' }}>.</span>
@@ -2762,10 +2762,10 @@ export default function App() {
                     ) : selectedAmenity ? (
                       <div>
                         <h3>{selectedAmenity} Details</h3>
-                        <p className="text-muted mt-2">Equipped luxury amenity part of the unified Shivalik Club cluster.</p>
+                        <p className="text-muted mt-2">Equipped luxury amenity part of the unified Ai RealEstate OS Club cluster.</p>
                         <div className="tower-stat-item mt-4">
                           <span className="label">Access Category</span>
-                          <span className="val text-gold">Shivalik Platinum Residency Membership</span>
+                          <span className="val text-gold">Ai RealEstate OS Platinum Residency Membership</span>
                         </div>
                         <button className="btn btn-outline w-100 mt-4" onClick={() => handleOpenBooking("Clubhouse Tour")}><Home /> Schedule Visit</button>
                       </div>
@@ -2813,7 +2813,7 @@ export default function App() {
                     <div className="chat-ai-profile">
                       <div className="ai-avatar"><Bot /></div>
                       <div>
-                        <h4>Shivalik Real Estate AI</h4>
+                        <h4>Ai RealEstate OS Real Estate AI</h4>
                         <span className="text-gold font-small">Online • 24/7 Intelligent Consultant</span>
                       </div>
                     </div>
@@ -2954,9 +2954,9 @@ export default function App() {
                       <div className="config-section">
                         <label>Select Unit Blueprint</label>
                         <select value={arSelectedUnit} onChange={(e) => handleARUnitChange(e.target.value)}>
-                          <option value="skyview-301">Shivalik Skyview - Unit 301 (3 BHK)</option>
-                          <option value="highlife-1204">Shivalik Highlife - Unit 1204 (3 BHK)</option>
-                          <option value="greenwoods-v1">Shivalik Greenwoods - Villa 1 (5 BHK)</option>
+                          <option value="skyview-301">Ai RealEstate OS Skyview - Unit 301 (3 BHK)</option>
+                          <option value="highlife-1204">Ai RealEstate OS Highlife - Unit 1204 (3 BHK)</option>
+                          <option value="greenwoods-v1">Ai RealEstate OS Greenwoods - Villa 1 (5 BHK)</option>
                         </select>
                       </div>
 
@@ -3032,7 +3032,7 @@ export default function App() {
                   <div className="ar-pitch-guide-box">
                     <div className="glass-card">
                       <h3>On-Site Geo-AR Pitch</h3>
-                      <p className="text-muted font-small mt-2 mb-4">Point the device camera at the empty construction plot to project a full-scale hologram of the completed Shivalik building.</p>
+                      <p className="text-muted font-small mt-2 mb-4">Point the device camera at the empty construction plot to project a full-scale hologram of the completed Ai RealEstate OS building.</p>
 
                       <div className="flex flex-col gap-4">
                         <button className={`pitch-step-btn ${geoArStep === 1 ? 'active' : ''}`} onClick={() => setGeoArStep(1)}>
@@ -3416,7 +3416,7 @@ export default function App() {
                       <div className="glass-card p-4 border-accent col-span-2">
                         <h3 className="text-gold">Welcome back, {currentBuyer.name}!</h3>
                         <p className="text-muted font-small mt-2">
-                          Thank you for choosing Shivalik Group. Here is your unified customer profile and document tracking center.
+                          Thank you for choosing Ai RealEstate OS Group. Here is your unified customer profile and document tracking center.
                         </p>
                         <div className="grid grid-cols-2 gap-4 mt-4 text-muted font-small">
                           <div>
@@ -3486,7 +3486,7 @@ export default function App() {
                                       onClick={() => {
                                         const doc = new jsPDF();
                                         doc.setFontSize(20);
-                                        doc.text("SHIVALIK GROUP RECEIPT", 20, 30);
+                                        doc.text("AI REALESTATE OS GROUP RECEIPT", 20, 30);
                                         doc.setFontSize(12);
                                         doc.text(`Received from: ${p.leadName}`, 20, 50);
                                         doc.text(`Milestone: ${p.stage}`, 20, 60);
@@ -3639,7 +3639,7 @@ export default function App() {
                       <h3>Executive Intelligence System</h3>
                       <span className="badge badge-gold"><Award /> Chairman & Directors Mode</span>
                     </div>
-                    <p className="text-muted mt-2">Query the real-time Shivalik intelligence model to analyze strategic variables, revenue gaps, and action recommendations.</p>
+                    <p className="text-muted mt-2">Query the real-time Ai RealEstate OS intelligence model to analyze strategic variables, revenue gaps, and action recommendations.</p>
                     
                     <div className="exec-prompts mt-4">
                       <label>Ask Boardroom Intelligence AI</label>
@@ -3714,7 +3714,7 @@ export default function App() {
                       <h3>Visual Inventory Vacancy Grid</h3>
                       <div className="inventory-selectors">
                         <select id="inventory-project-select">
-                          <option value="skyview">Shivalik Skyview</option>
+                          <option value="skyview">Ai RealEstate OS Skyview</option>
                         </select>
                         <select id="inventory-tower-select">
                           <option value="Tower A">Tower A</option>
@@ -3797,7 +3797,7 @@ export default function App() {
                 <div className="glass-card arch-intro-card">
                   <div className="arch-intro-header">
                     <span className="badge badge-gold">SYSTEM DIAGRAMS</span>
-                    <h3>Shivalik High-Performance Platform Architecture</h3>
+                    <h3>Ai RealEstate OS High-Performance Platform Architecture</h3>
                     <p className="text-muted">
                       Explore the multi-tier hybrid stack powering real-time WebGL renderings, serverless db synchronization, 
                       and AI completions under 200ms latency.
@@ -3902,7 +3902,7 @@ export default function App() {
                   <div className="glass-card arch-spec-card">
                     <div className="card-header-new">
                       <h4>🛠️ Infrastructure Technology Matrix</h4>
-                      <p className="text-muted font-small">Core component stack parameters optimized for Shivalik high-fidelity portal requirements.</p>
+                      <p className="text-muted font-small">Core component stack parameters optimized for Ai RealEstate OS high-fidelity portal requirements.</p>
                     </div>
 
                     <div className="tech-matrix-table-wrapper">

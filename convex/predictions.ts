@@ -163,7 +163,7 @@ export const runPrediction = action({
           .join("\n\n");
 
         const prompt = `
-You are the AI Purchase Behavior Predictor for Shivalik Group CRM.
+You are the AI Purchase Behavior Predictor for Ai RealEstate OS CRM.
 Analyze the following data about a customer lead:
 Customer Lead Profile:
 - Name: ${lead.name}
@@ -202,7 +202,7 @@ Based on this information, output a JSON object containing:
 {
   "conversionProbability": <number between 0 and 100 representing the likelihood of this lead converting to a client>,
   "recommendedLocations": [<array of string location recommendations inside Ahmedabad, up to 3>],
-  "bestFitProperty": "<string representing the name of the best matching Shivalik property, must match one of the available property names>",
+  "bestFitProperty": "<string representing the name of the best matching Ai RealEstate OS property, must match one of the available property names>",
   "purchaseBehaviorAnalysis": "<detailed paragraph analyzing their budget, income, job stability, loan requirements, and call history sentiment>",
   "scrapedMarketTrends": "<brief description of the scraped market signals and how they affect this lead>",
   "factorsToConvert": [<array of string positive signals and negative risks, e.g. 'Strong income support', 'Budget constraint at 1.8 Cr'>],
@@ -238,7 +238,7 @@ Respond ONLY with this JSON object, no other text. Do not wrap in markdown code 
               leadId: args.leadId,
               conversionProbability: parsed.conversionProbability,
               recommendedLocations: parsed.recommendedLocations || [preferredLoc],
-              bestFitProperty: parsed.bestFitProperty || properties[0]?.name || "Shivalik Skyview",
+              bestFitProperty: parsed.bestFitProperty || properties[0]?.name || "Ai RealEstate OS Skyview",
               purchaseBehaviorAnalysis: parsed.purchaseBehaviorAnalysis || "AI analysis completed.",
               scrapedMarketTrends: parsed.scrapedMarketTrends || scrapedMarket.trends,
               factorsToConvert: parsed.factorsToConvert || ["Active customer interaction"],
@@ -259,7 +259,7 @@ Respond ONLY with this JSON object, no other text. Do not wrap in markdown code 
     const budget = lead.budget || 20000000;
     const bhkPref = lead.bhkPreference || "3 BHK";
     
-    let matchedProperty = properties[0]?.name || "Shivalik Skyview";
+    let matchedProperty = properties[0]?.name || "Ai RealEstate OS Skyview";
     let minPriceDiff = Infinity;
 
     for (const p of properties) {

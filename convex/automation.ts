@@ -58,8 +58,8 @@ export const executePipelineAutomation = mutation({
     }
 
     const leadName = lead.name;
-    const project = lead.project || "Shivalik Skyview";
-    const email = lead.email || "client@shivalik.com";
+    const project = lead.project || "Ai RealEstate OS Skyview";
+    const email = lead.email || "client@airealestateos.com";
     const bhk = lead.bhkPreference || "3 BHK";
 
     // Detect lead gender for correct Indic grammar
@@ -249,7 +249,7 @@ export const executePipelineAutomation = mutation({
         },
         {
           sender: "agent",
-          text: `Hi ${leadName}! I'm calling from Shivalik Group CRM. I see you recently inquired about our luxury residential high-rise project, ${project}, and were specifically checking options for a premium ${bhk} layout. Am I reaching you at a good time?`,
+          text: `Hi ${leadName}! I'm calling from Ai RealEstate OS CRM. I see you recently inquired about our luxury residential high-rise project, ${project}, and were specifically checking options for a premium ${bhk} layout. Am I reaching you at a good time?`,
           time: "0:18"
         },
         {

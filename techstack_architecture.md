@@ -1,6 +1,6 @@
-# Shivalik AI Platform - Production Architecture & Tech Stack
+# Ai RealEstate OS - Production Architecture & Tech Stack
 
-This document defines the production-grade system architecture and software tech stack required to scale the **Shivalik AI Property Experience Platform** to support thousands of concurrent buyers, agent portals, and real-time AI simulations.
+This document defines the production-grade system architecture and software tech stack required to scale the **Ai RealEstate OS Property Experience Platform** to support thousands of concurrent buyers, agent portals, and real-time AI simulations.
 
 ---
 
@@ -69,7 +69,7 @@ graph TB
 
 ## 2. Production Tech Stack Components
 
-| Layer | Recommended Technology | Purpose in Shivalik Platform | Alternative Options |
+| Layer | Recommended Technology | Purpose in Ai RealEstate OS Platform | Alternative Options |
 | :--- | :--- | :--- | :--- |
 | **Frontend Framework** | **Next.js (React)** | Serves as the core UI container. Supports Server-Side Rendering (SSR) for SEO-optimized landing pages and static exports for client dashboard performance. | Vite React, Remix |
 | **3D Rendering Engine** | **React Three Fiber (R3F) + Three.js** | Renders the interactive 3D township layouts and the interior dollhouse viewer natively in WebGL. | BabylonJS, PlayCanvas |

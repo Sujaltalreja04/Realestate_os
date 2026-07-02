@@ -6,7 +6,7 @@ import {
 
 const BLUEPRINTS = {
   'skyview-301': {
-    name: 'Shivalik Skyview - Premium 3 BHK (Unit 301)',
+    name: 'Ai RealEstate OS Skyview - Premium 3 BHK (Unit 301)',
     scale: '1:50',
     rera: 'PR/GJ/AHMEDABAD/SW/1029',
     totalArea: '1840 sq.ft.',
@@ -64,7 +64,7 @@ const BLUEPRINTS = {
     ]
   },
   'highlife-1204': {
-    name: 'Shivalik Highlife - Compact 2 BHK (Unit 1204)',
+    name: 'Ai RealEstate OS Highlife - Compact 2 BHK (Unit 1204)',
     scale: '1:50',
     rera: 'PR/GJ/AHMEDABAD/SW/4401',
     totalArea: '1240 sq.ft.',
@@ -109,7 +109,7 @@ const BLUEPRINTS = {
     ]
   },
   'greenwoods-v1': {
-    name: 'Shivalik Greenwoods - Luxury Villa 1 (5 BHK Master Ground Layout)',
+    name: 'Ai RealEstate OS Greenwoods - Luxury Villa 1 (5 BHK Master Ground Layout)',
     scale: '1:75',
     rera: 'PR/GJ/AHMEDABAD/SW/8821',
     totalArea: '4800 sq.ft.',
