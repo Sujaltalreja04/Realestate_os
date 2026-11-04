@@ -17,7 +17,7 @@ import AutoCADWorkspace from './components/AutoCADWorkspace';
 import GISMap from './components/GISMap';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 // Error Boundary for ThreeDViewer — prevents WebGL crashes from killing entire app
@@ -255,7 +255,11 @@ export default function App() {
 
   const [role, setRole] = useState("buyer"); 
   const [activeBuyerPersonaId, setActiveBuyerPersonaId] = useState("");
+  // Workspace gateway is disabled for now: shared links open straight into the Client Site.
+  // Set ENABLE_PORTAL_GATE back to true to bring the "Select Workspace" modal back for first-time visitors.
+  const ENABLE_PORTAL_GATE = false;
   const [showGate, setShowGate] = useState(() => {
+    if (!ENABLE_PORTAL_GATE) return false;
     if (typeof window !== 'undefined') {
       return !localStorage.getItem('ai_realestate_os_portal_selected');
     }
@@ -267,6 +271,7 @@ export default function App() {
   const inventory = useQuery(api.inventory?.getInventory) ?? [];
   const activityStream = useQuery(api.activity?.getActivity) ?? [];
   const addActivity = useMutation(api.activity?.addActivity);
+  const copilotChat = useAction(api.ai.copilotChat);
   const leads = useQuery(api.leads?.getLeads) ?? [];
   const payments = useQuery(api.crm?.getPayments) ?? [];
   // Project discovery filters
@@ -468,81 +473,30 @@ export default function App() {
     setCopilotIsStreaming(true);
     triggerTelemetry("copilot_chat", `Submitted prompt: ${userMessage.slice(0, 40)}...`);
 
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY || "";
     const startTime = Date.now();
-    let tokensCount = 0;
 
     try {
-      if (!apiKey || apiKey === "YOUR_API_KEY" || apiKey.trim() === "") {
-        throw new Error("Groq API key not configured. Please define VITE_GROQ_API_KEY in .env");
-      }
-
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: "You are Ai RealEstate OS Copilot, an elite AI Real Estate Advisor for Ai RealEstate OS Group in Ahmedabad. Provide extremely precise details on Sunlight Indexes, CAGR appreciation growth, layouts, construction, and neighborhood infrastructure. Be concise, polite, and structure output with bullet points where necessary." },
-            ...updatedHistory.map(h => ({ role: h.role, content: h.content }))
-          ],
-          model: "openai/gpt-oss-20b",
-          temperature: 0.7,
-          max_tokens: 1500,
-          stream: true
-        })
+      // Groq is called server-side by a Convex action, so the API key never reaches the browser
+      const { content: reply, model } = await copilotChat({
+        messages: updatedHistory.map(h => ({ role: h.role, content: h.content }))
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let done = false;
+      // Reveal the reply word by word for a streaming feel
+      const words = reply.split(/(\s+)/);
       let streamedResponse = "";
-
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: !done });
-          const lines = chunk.split("\n");
-          
-          for (const line of lines) {
-            const cleanLine = line.trim();
-            if (cleanLine.startsWith("data: ")) {
-              const dataStr = cleanLine.slice(6).trim();
-              if (dataStr === "[DONE]") {
-                done = true;
-                break;
-              }
-              try {
-                const parsed = JSON.parse(dataStr);
-                const content = parsed.choices[0]?.delta?.content || "";
-                if (content) {
-                  streamedResponse += content;
-                  setCopilotStreamingText(streamedResponse);
-                  
-                  // Track telemetry stats
-                  tokensCount += content.split(/\s+/).length || 1;
-                  const elapsed = (Date.now() - startTime) / 1000;
-                  setCopilotStats({
-                    tokensPerSec: Math.round(tokensCount / (elapsed || 0.1)),
-                    timeElapsed: parseFloat(elapsed.toFixed(1)),
-                    totalTokens: tokensCount,
-                    activeModel: "openai/gpt-oss-20b"
-                  });
-                }
-              } catch (e) {
-                // Ignore incomplete SSE json parsing issues
-              }
-            }
-          }
-        }
+      let tokensCount = 0;
+      for (const word of words) {
+        streamedResponse += word;
+        if (word.trim()) tokensCount++;
+        setCopilotStreamingText(streamedResponse);
+        const elapsed = (Date.now() - startTime) / 1000;
+        setCopilotStats({
+          tokensPerSec: Math.round(tokensCount / (elapsed || 0.1)),
+          timeElapsed: parseFloat(elapsed.toFixed(1)),
+          totalTokens: tokensCount,
+          activeModel: model
+        });
+        await new Promise(resolve => setTimeout(resolve, 12));
       }
 
       // Commit finalized message to history

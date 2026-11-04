@@ -133,7 +133,6 @@ const getScrapedMarketData = (location: string) => {
 export const runPrediction = action({
   args: {
     leadId: v.id("leads"),
-    apiKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // 1. Fetch Lead context
@@ -148,8 +147,8 @@ export const runPrediction = action({
     const preferredLoc = lead.preferredLocation || "Ambawadi";
     const scrapedMarket = getScrapedMarketData(preferredLoc);
 
-    // 2. Try LLM first if API key exists in server env or args
-    const apiKey = process.env.VITE_GROQ_API_KEY || process.env.GROQ_API_KEY || args.apiKey || "";
+    // 2. Try LLM first if the API key is set on the deployment
+    const apiKey = process.env.GROQ_API_KEY || "";
 
     if (apiKey && apiKey.trim() !== "" && apiKey !== "YOUR_API_KEY") {
       try {

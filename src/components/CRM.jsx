@@ -314,6 +314,7 @@ export default function CRM() {
 
   // AI Predictions Queries and Actions
   const runPredictionAction = useAction(api.predictions?.runPrediction);
+  const sarvamTTS = useAction(api.ai.textToSpeech);
   const allPredictions = useQuery(api.predictions?.getAllPredictions) || [];
 
   // CRM Navigation Sub-Tab State
@@ -705,9 +706,6 @@ export default function CRM() {
   const prefetchCallAudio = async (callLog) => {
     if (!callLog || !callLog.transcript) return;
     
-    const apiKey = import.meta.env.VITE_SARVAM_API_KEY || "";
-    if (!apiKey) return;
-    
     const langMap = { en: "en-IN", hi: "hi-IN", gu: "gu-IN" };
     const langCode = langMap[automationLang] || "en-IN";
     const transcript = callLog.transcript;
@@ -748,32 +746,10 @@ export default function CRM() {
         const audioData = [];
         
         for (const chunk of chunks) {
-          const res = await fetch("https://api.sarvam.ai/text-to-speech", {
-            method: "POST",
-            headers: {
-              "api-subscription-key": apiKey,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              inputs: [chunk],
-              target_language_code: langCode,
-              speaker: speaker,
-              pace: 1.0,
-              speech_sample_rate: 22050,
-              enable_preprocessing: true,
-              model: "bulbul:v3",
-              output_audio_codec: "wav"
-            })
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const base64Audio = data?.audios?.[0];
-            if (base64Audio) {
-              audioData.push(base64Audio);
-            }
-          } else {
-            throw new Error(`Status ${res.status}`);
+          // Sarvam is called server-side by a Convex action (key stays on the server)
+          const base64Audio = await sarvamTTS({ text: chunk, languageCode: langCode, speaker });
+          if (base64Audio) {
+            audioData.push(base64Audio);
           }
         }
         audioPrefetchMap.current[idx] = { status: "success", audios: audioData };
@@ -799,7 +775,6 @@ export default function CRM() {
       sarvamAudioRef.current = null;
     }
 
-    const apiKey = import.meta.env.VITE_SARVAM_API_KEY || "";
     const langMap = { en: "en-IN", hi: "hi-IN", gu: "gu-IN" };
     const langCode = langMap[automationLang] || "en-IN";
 
@@ -866,39 +841,14 @@ export default function CRM() {
       speaker = isFemale ? "neha" : "aditya";
     }
 
-    if (!apiKey) {
-      await speakBrowserTTS(cleanText, automationLang, line.sender === "agent");
-      return;
-    }
-
     const chunks = chunkText(cleanText, 480);
     for (const chunk of chunks) {
       if (isMuted) break;
       try {
-        const res = await fetch("https://api.sarvam.ai/text-to-speech", {
-          method: "POST",
-          headers: {
-            "api-subscription-key": apiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            inputs: [chunk],
-            target_language_code: langCode,
-            speaker: speaker,
-            pace: 1.0,
-            speech_sample_rate: 22050,
-            enable_preprocessing: true,
-            model: "bulbul:v3",
-            output_audio_codec: "wav"
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const base64Audio = data?.audios?.[0];
-          if (base64Audio) {
-            await playBase64Audio(base64Audio);
-          }
+        // Server-side Sarvam call; falls back to browser TTS if unavailable
+        const base64Audio = await sarvamTTS({ text: chunk, languageCode: langCode, speaker });
+        if (base64Audio) {
+          await playBase64Audio(base64Audio);
         } else {
           await speakBrowserTTS(chunk, automationLang, line.sender === "agent");
         }
@@ -1300,8 +1250,7 @@ export default function CRM() {
         clearInterval(interval);
         
         // Call backend Convex Action
-        const key = import.meta.env.VITE_GROQ_API_KEY || "";
-        runPredictionAction({ leadId, apiKey: key })
+        runPredictionAction({ leadId })
           .then((result) => {
             // Store result immediately in local state so UI updates instantly
             if (result) {
