@@ -14,6 +14,8 @@ import CRM from './components/CRM';
 import VirtualTour from './components/VirtualTour';
 import EMICalculator from './components/EMICalculator';
 import AutoCADWorkspace from './components/AutoCADWorkspace';
+import GISMap from './components/GISMap';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -229,7 +231,7 @@ const getTabFromHash = () => {
   const validTabs = [
     "landing", "visualize", "3d-township", "compare", "ai-advisor", 
     "copilot", "interior", "finder", "customer-portal", "leads", 
-    "sales-analytics", "exec-insights", "inventory", "architecture"
+    "sales-analytics", "exec-insights", "inventory", "architecture", "gis-map"
   ];
   return validTabs.includes(hash) ? hash : "landing";
 };
@@ -1623,6 +1625,9 @@ export default function App() {
               <a href="#customer-portal" className={`nav-item ${activeTab === 'customer-portal' ? 'active' : ''}`} onClick={() => setActiveTab('customer-portal')}>
                 <FileCheck /> Customer Portal
               </a>
+              <a href="#gis-map" className={`nav-item ${activeTab === 'gis-map' ? 'active' : ''}`} onClick={() => setActiveTab('gis-map')}>
+                <MapPin /> GIFT City GIS Map
+              </a>
             </div>
           )}
 
@@ -1646,6 +1651,9 @@ export default function App() {
               </a>
               <a href="#inventory" className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
                 <Grid /> Inventory Vacancy Map
+              </a>
+              <a href="#gis-map" className={`nav-item ${activeTab === 'gis-map' ? 'active' : ''}`} onClick={() => setActiveTab('gis-map')}>
+                <MapPin /> GIFT City GIS Map
               </a>
             </div>
           )}
@@ -1690,6 +1698,7 @@ export default function App() {
               {activeTab === "exec-insights" && "Executive Leadership Dashboard"}
               {activeTab === "inventory" && "Real-time Block Vacancy Map"}
               {activeTab === "architecture" && "Platform Architecture & Data Flows"}
+              {activeTab === "gis-map" && "GIFT City GIS Mapping"}
             </h2>
           </div>
           <div className="flex align-center gap-4">
@@ -2653,6 +2662,13 @@ export default function App() {
             </div>
           )}
 
+          {/* GIS MAPPING – GIFT CITY */}
+          {activeTab === "gis-map" && (
+            <div className="tab-content">
+              <GISMap />
+            </div>
+          )}
+
           {/* 1.5 VISUALIZE PROPERTY */}
           {activeTab === "visualize" && (
             <div className="tab-content h-100">
@@ -3559,7 +3575,7 @@ export default function App() {
 
           {/* 9. LEAD SCORING CRM (SALES) */}
           {activeTab === "leads" && (
-            <CRM />
+            <ErrorBoundary title="CRM data failed to load"><CRM /></ErrorBoundary>
           )}
 
           {/* 9. SALES ANALYTICS */}

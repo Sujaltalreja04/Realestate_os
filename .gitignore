@@ -1,23 +1,46 @@
-# Logs
-logs
+# ── Dependencies ──
+node_modules/
+
+# ── Build output ──
+dist/
+dist-ssr/
+build/
+.vite/
+*.tsbuildinfo
+
+# ── Environment / secrets (never commit) ──
+.env
+.env.*
+*.local
+!.env.example
+
+# ── Deploy platform folders ──
+.vercel/
+.netlify/
+.firebase/
+
+# ── Logs ──
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-.env
 
-node_modules
-dist
-dist-ssr
-*.local
+# ── Test / coverage / caches ──
+coverage/
+.nyc_output/
+.cache/
+.eslintcache
 
-# Editor directories and files
+# ── Editor & OS ──
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
+desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
