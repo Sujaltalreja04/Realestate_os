@@ -6,7 +6,7 @@
   --line: rgba(15, 23, 42, 0.08);
   --brand: #0f766e; --brand-2: #14b8a6;
   --shadow: 0 10px 30px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
-  position: relative; margin: -20px -30px; height: calc(100vh - 74px); min-height: 600px;
+  position: relative; margin: 0; height: calc(100svh - 4rem); min-height: 600px;
   overflow: hidden; background: #1e293b; color: var(--ink);
   font-family: Inter, system-ui, sans-serif;
 }
@@ -260,7 +260,7 @@
   .details-open .gx-search-wrap { display: none; }
 }
 @media (max-width: 900px) {
-  .gx-shell { margin: -14px -16px; }
+  .gx-shell { margin: 0; }
   .gx-rail { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; height: 62px; flex-direction: row; justify-content: space-around; padding: 0 6px; }
   .gx-rail-logo, .gx-rail-spacer { display: none; }
   .gx-drawer { left: 10px; right: 10px; width: auto; top: auto; bottom: 82px; max-height: 55%; }

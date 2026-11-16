@@ -9,10 +9,13 @@
  */
 
 import type * as activity from "../activity.js";
+import type * as ai from "../ai.js";
 import type * as automation from "../automation.js";
+import type * as callAnalysis from "../callAnalysis.js";
 import type * as crm from "../crm.js";
 import type * as inventory from "../inventory.js";
 import type * as leads from "../leads.js";
+import type * as lib_sarvam from "../lib/sarvam.js";
 import type * as predictions from "../predictions.js";
 import type * as properties from "../properties.js";
 import type * as seed from "../seed.js";
@@ -25,10 +28,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
+  ai: typeof ai;
   automation: typeof automation;
+  callAnalysis: typeof callAnalysis;
   crm: typeof crm;
   inventory: typeof inventory;
   leads: typeof leads;
+  "lib/sarvam": typeof lib_sarvam;
   predictions: typeof predictions;
   properties: typeof properties;
   seed: typeof seed;
