@@ -62,19 +62,137 @@ export function routeBetween(a: LngLat, b: LngLat): Promise<Route> {
   return routeCache.get(key)!
 }
 
-/** Search for a place name with OpenStreetMap Nominatim, biased to Ahmedabad–Gandhinagar. */
-export async function geocode(q: string): Promise<{ name: string; center: LngLat; osmId?: string } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&viewbox=72.40,23.30,72.80,22.90&bounded=1&q=${encodeURIComponent(q)}`
-  try {
-    const r = await fetch(url, { headers: { Accept: 'application/json' } })
-    const j = (await r.json()) as { lat: string; lon: string; display_name: string; osm_type?: string; osm_id?: number }[]
-    if (!j[0]) return null
-    return {
-      name: j[0].display_name.split(',').slice(0, 2).join(','),
-      center: [Number(j[0].lon), Number(j[0].lat)],
-      osmId: j[0].osm_type ? `${j[0].osm_type}/${j[0].osm_id}` : undefined,
+/* ── Place search and reverse geocoding (OpenStreetMap Nominatim) ───────────────────────────── */
+
+/** Postal-style address broken into the parts Indian addresses use. */
+export interface Address {
+  /** House number and road. */
+  street?: string
+  /** Suburb, neighbourhood or village. */
+  locality?: string
+  city?: string
+  /** Taluka / tehsil (Nominatim "county" in India). */
+  taluka?: string
+  district?: string
+  state?: string
+  postcode?: string
+  country?: string
+}
+
+export interface PlaceHit {
+  name: string
+  /** One-line address under the name. */
+  label: string
+  center: LngLat
+  osmId?: string
+  address?: Address
+  /** Zoom that frames the place (from its bounding box). */
+  zoom?: number
+}
+
+const NOMINATIM = 'https://nominatim.openstreetmap.org'
+
+interface NominatimResult {
+  lat: string
+  lon: string
+  name?: string
+  display_name: string
+  osm_type?: string
+  osm_id?: number
+  boundingbox?: [string, string, string, string]
+  address?: Record<string, string>
+}
+
+// The public Nominatim server allows at most one request per second, so requests are queued.
+let queue: Promise<unknown> = Promise.resolve()
+let lastRequest = 0
+function nominatim<T>(path: string): Promise<T> {
+  const run = async () => {
+    const wait = lastRequest + 1100 - Date.now()
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+    lastRequest = Date.now()
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 12000)
+    try {
+      const r = await fetch(`${NOMINATIM}${path}`, { headers: { Accept: 'application/json' }, signal: ctrl.signal })
+      if (!r.ok) throw new Error(`Nominatim HTTP ${r.status}`)
+      return (await r.json()) as T
+    } finally {
+      clearTimeout(t)
     }
-  } catch {
-    return null
   }
+  const p = queue.then(run, run)
+  queue = p.catch(() => undefined)
+  return p
+}
+
+function toAddress(a?: Record<string, string>): Address | undefined {
+  if (!a) return undefined
+  const street = [a.house_number, a.road].filter(Boolean).join(' ') || undefined
+  const locality = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.residential ?? a.hamlet ?? a.village
+  const city = a.city ?? a.town ?? a.municipality ?? (a.village !== locality ? a.village : undefined)
+  return { street, locality, city, taluka: a.county ?? a.subdistrict, district: a.state_district ?? a.district, state: a.state, postcode: a.postcode, country: a.country }
+}
+
+/** Short, de-duplicated one-line address. */
+export function addressLine(a?: Address, skip?: string) {
+  if (!a) return ''
+  const parts = [a.locality, a.city, a.district, a.state].filter((p): p is string => !!p && p !== skip)
+  return [...new Set(parts)].join(', ')
+}
+
+function zoomForBox(b?: [string, string, string, string]) {
+  if (!b) return undefined
+  const span = Math.max(Number(b[1]) - Number(b[0]), Number(b[3]) - Number(b[2]), 0.001)
+  return Math.min(16.5, Math.max(4.5, Math.log2(360 / span) - 0.6))
+}
+
+function toHit(r: NominatimResult): PlaceHit {
+  const address = toAddress(r.address)
+  const name = r.name || address?.street || address?.locality || r.display_name.split(',')[0]!.trim()
+  return {
+    name,
+    label: addressLine(address, name) || r.display_name.split(',').slice(1, 4).join(',').trim(),
+    center: [Number(r.lon), Number(r.lat)],
+    osmId: r.osm_type && r.osm_id ? `${r.osm_type}/${r.osm_id}` : undefined,
+    address,
+    zoom: zoomForBox(r.boundingbox),
+  }
+}
+
+/** Search places anywhere in India, ranking results near `near` (the current map view) higher. */
+export async function searchPlaces(q: string, near?: { w: number; s: number; e: number; n: number }, limit = 6): Promise<PlaceHit[]> {
+  const box = near ? `&viewbox=${near.w.toFixed(3)},${near.n.toFixed(3)},${near.e.toFixed(3)},${near.s.toFixed(3)}` : ''
+  try {
+    const j = await nominatim<NominatimResult[]>(`/search?format=jsonv2&addressdetails=1&accept-language=en&countrycodes=in&limit=${limit}${box}&q=${encodeURIComponent(q)}`)
+    return j.map(toHit)
+  } catch {
+    return []
+  }
+}
+
+const AHMEDABAD_BOX = { w: 72.4, s: 22.9, e: 72.8, n: 23.3 }
+
+/** Best single match for a place name, preferring Ahmedabad–Gandhinagar but searching all of India. */
+export async function geocode(q: string): Promise<PlaceHit | null> {
+  return (await searchPlaces(q, AHMEDABAD_BOX, 1))[0] ?? null
+}
+
+const reverseCache = new Map<string, Promise<PlaceHit | null>>()
+
+/** Nearest address for a point on the map. */
+export function reverseGeocode(c: LngLat): Promise<PlaceHit | null> {
+  const key = `${c[1].toFixed(5)},${c[0].toFixed(5)}`
+  if (!reverseCache.has(key)) {
+    reverseCache.set(
+      key,
+      nominatim<NominatimResult & { error?: string }>(`/reverse?format=jsonv2&addressdetails=1&accept-language=en&zoom=18&lat=${c[1].toFixed(6)}&lon=${c[0].toFixed(6)}`)
+        .then((r) => (r.error ? null : toHit(r)))
+        .catch(() => {
+          reverseCache.delete(key)
+          return null
+        }),
+    )
+  }
+  return reverseCache.get(key)!
 }

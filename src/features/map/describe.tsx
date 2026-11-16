@@ -5,7 +5,7 @@ import type { Property } from '@/features/projects/model'
 import type { UnitView } from '@/features/client/units'
 import { Missing, type Fact, type Source } from './provenance'
 import { buildingHeight, POI_META, type LngLat, type OsmArea, type OsmPoi } from './osm'
-import { fmtCoord, ringAreaM2 } from './geo'
+import { addressLine, fmtCoord, ringAreaM2, type Address } from './geo'
 import { LOCALITY_COORDS } from './places'
 
 export type DemoBuilding = (typeof BUILDINGS)[number]
@@ -19,7 +19,21 @@ export type Selection =
   | { kind: 'demo-parcel'; parcel: DemoParcel }
   | { kind: 'demo-building'; building: DemoBuilding }
   | { kind: 'demo-infra'; infra: DemoInfra }
-  | { kind: 'place'; name: string; center: LngLat; osmId?: string }
+  | {
+      kind: 'place'
+      name: string
+      center: LngLat
+      osmId?: string
+      address?: Address
+      /** How the place was chosen: a search result, a click on the map, or the device's GPS. */
+      how?: 'search' | 'click' | 'gps'
+      /** GPS accuracy radius in metres. */
+      accuracyM?: number
+      /** Zoom that frames the place when flying to it. */
+      zoom?: number
+      /** True while the address is still being looked up. */
+      loading?: boolean
+    }
 
 export interface DocLink {
   label: string
@@ -301,16 +315,36 @@ export function describe(sel: Selection): Described {
       }
     }
 
-    case 'place':
+    case 'place': {
+      const a = sel.address
+      const [lng, lat] = sel.center
+      const lookup = sel.loading ? 'Looking up address…' : null
+      const overview = ([
+        { label: 'Address', value: a?.street ?? lookup, source: 'verified' },
+        { label: 'Locality', value: a?.locality ?? lookup, source: 'verified' },
+        { label: 'City / town', value: a?.city ?? null, source: 'verified' },
+        { label: 'Taluka', value: a?.taluka ?? null, source: 'verified' },
+        { label: 'District', value: a?.district ?? lookup, source: 'verified' },
+        { label: 'State', value: a?.state ?? lookup, source: 'verified' },
+        { label: 'PIN code', value: a?.postcode ?? null, source: 'verified' },
+        { label: 'Coordinates', value: fmtCoord(sel.center), source: sel.how === 'gps' ? 'estimate' : 'verified', note: sel.how === 'gps' ? 'From this device’s location service.' : undefined },
+        ...(sel.accuracyM != null ? [{ label: 'GPS accuracy', value: `± ${Math.round(sel.accuracyM)} m`, source: 'estimate' as const, note: 'Reported by the device.' }] : []),
+      ] as Fact[]).filter((f) => f.value != null || ['Coordinates', 'Address', 'District', 'State'].includes(f.label))
       return {
         id: `place:${sel.center.join(',')}`,
         title: sel.name,
-        subtitle: 'Search result',
-        kindLabel: 'Location',
+        subtitle: sel.loading ? 'Finding the nearest address…' : addressLine(a, sel.name) || (sel.how === 'search' ? 'Search result' : 'Location'),
+        kindLabel: sel.how === 'gps' ? 'Your location' : sel.how === 'click' ? 'Dropped pin' : 'Location',
         source: 'verified',
         center: sel.center,
-        overview: [{ label: 'Coordinates', value: fmtCoord(sel.center), source: 'verified', note: 'Geocoded with OpenStreetMap Nominatim.' }],
-        documents: sel.osmId ? [{ label: 'View on OpenStreetMap', href: `https://www.openstreetmap.org/${sel.osmId}`, source: 'verified' }] : [],
+        caveat: sel.how === 'search' ? undefined : 'Nearest address from OpenStreetMap. It is a postal-style address, not a legal plot or survey record.',
+        overview,
+        documents: [
+          ...(sel.osmId ? [{ label: 'View on OpenStreetMap', href: `https://www.openstreetmap.org/${sel.osmId}`, source: 'verified' as const }] : []),
+          { label: 'Open in Google Maps', href: `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lng.toFixed(6)}`, source: 'verified', note: 'Same coordinates, for Street View and directions.' },
+          ...(a?.state === 'Gujarat' ? [{ label: 'Land records (AnyROR Gujarat)', href: 'https://anyror.gujarat.gov.in/', source: 'verified' as const, note: 'Official 7/12 and ownership records.' }] : []),
+        ],
       }
+    }
   }
 }

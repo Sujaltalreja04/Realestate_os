@@ -21,7 +21,15 @@ export const KEY_DESTINATIONS: { name: string; center: LngLat; osm: string }[] =
 ]
 
 export const VIEWS = {
-  gift: { center: [72.6835, 23.1595] as LngLat, zoom: 15.4, label: 'GIFT City' },
-  ahmedabad: { center: [72.52, 23.035] as LngLat, zoom: 12.2, label: 'Project localities' },
+  india: { center: [80.5, 22.6] as LngLat, zoom: 3.9, label: 'India' },
+  gujarat: { center: [71.4, 22.5] as LngLat, zoom: 6.3, label: 'Gujarat' },
   region: { center: [72.6, 23.1] as LngLat, zoom: 10.6, label: 'Ahmedabad–Gandhinagar' },
+  ahmedabad: { center: [72.52, 23.035] as LngLat, zoom: 12.2, label: 'Project localities' },
+  gift: { center: [72.6835, 23.1595] as LngLat, zoom: 15.4, label: 'GIFT City' },
 }
+
+/** Panning limit: India and its neighbours (matches the area covered by public/geo/india-borders.geojson). */
+export const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [55, 2],
+  [105, 42],
+]

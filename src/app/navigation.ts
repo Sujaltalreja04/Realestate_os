@@ -62,7 +62,7 @@ export const CLIENT_NAV: NavItem[] = [
   { path: '/projects', label: 'Projects', description: 'All developments', icon: Building2 },
   { path: '/finder', label: 'Find a home', description: 'Match homes to your needs', icon: Search },
   { path: '/compare', label: 'Compare', description: 'Side-by-side comparison', icon: Columns3 },
-  { path: '/map', label: 'GIFT City map', description: 'GIS map of GIFT City', icon: Map },
+  { path: '/map', label: 'Map', description: 'India & Gujarat map with borders, satellite and search', icon: Map },
   { path: '/gallery', label: 'Gallery', description: 'Renders and virtual tours', icon: Image },
   { path: '/township', label: '3D township', description: 'Explore the site in 3D', icon: Box },
   { path: '/interior', label: 'Interior designer', description: 'Style your rooms with AI', icon: Sofa },
@@ -128,6 +128,7 @@ export const APPS: Record<AppId, AppDef> = {
         label: 'Operations',
         items: [
           { path: '/sales/inventory', label: 'Inventory', description: 'Unit availability by tower', icon: LayoutGrid },
+          { path: '/sales/assets', label: 'Assets', description: 'Buildings, floors and offices on the map', icon: Building2 },
           { path: '/sales/copilot', label: 'Copilot', description: 'Ask questions about your data', icon: Sparkles },
         ],
       },

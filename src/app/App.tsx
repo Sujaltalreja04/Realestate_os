@@ -14,7 +14,10 @@ const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
 const ProjectDetailPage = lazy(() => import('@/features/projects/ProjectDetailPage'))
 const FinderPage = lazy(() => import('@/features/client/FinderPage'))
 const ComparePage = lazy(() => import('@/features/client/ComparePage'))
-const MapPage = lazy(() => import('@/features/client/GISMapPage'))
+const MapPage = lazy(() => import('@/features/map/MapPage'))
+const GiftCityMapPage = lazy(() => import('@/features/client/GISMapPage'))
+const AssetPage = lazy(() => import('@/features/assets/AssetPage'))
+const AssetsAdminPage = lazy(() => import('@/features/assets/AssetsAdminPage'))
 const GalleryPage = lazy(() => import('@/features/client/GalleryPage'))
 const TownshipPage = lazy(() => import('@/features/client/TownshipPage'))
 const InteriorPage = lazy(() => import('@/features/client/InteriorPage'))
@@ -71,6 +74,9 @@ const router = createBrowserRouter([
           { path: 'finder', element: page(<FinderPage />) },
           { path: 'compare', element: page(<ComparePage />) },
           { path: 'map', element: page(<MapPage />) },
+          { path: 'map/gift-city', element: page(<GiftCityMapPage />) },
+          { path: 'assets/:assetId', element: page(<AssetPage />) },
+          { path: 'buildings/shivalik-shilp', element: <Navigate to="/assets/shivalik-shilp" replace /> },
           { path: 'gallery', element: page(<GalleryPage />) },
           { path: 'township', element: page(<TownshipPage />) },
           { path: 'interior', element: page(<InteriorPage />) },
@@ -103,6 +109,7 @@ const router = createBrowserRouter([
               { path: 'calls', element: page(<CallInsightsPage />) },
               { path: 'competitors', element: page(<CompetitorsPage />) },
               { path: 'inventory', element: page(<InventoryPage />) },
+              { path: 'assets', element: page(<AssetsAdminPage />) },
               { path: 'copilot', element: page(<CopilotPage />) },
               { path: 'architecture', element: page(<ArchitecturePage />) },
             ],

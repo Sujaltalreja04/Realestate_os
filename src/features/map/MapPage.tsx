@@ -2,16 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type MapGeoJSONFeature } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useAction } from 'convex/react'
+import { Link, useSearchParams } from 'react-router-dom'
 import * as D from '@radix-ui/react-dialog'
 import {
   AlertTriangle,
   BarChart3,
   Box,
+  Building2,
   Columns3,
   Layers,
   ListFilter,
   Loader2,
+  LocateFixed,
   Map as MapIcon,
+  Rotate3d,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -25,20 +29,48 @@ import { bhkNumbers, type Property } from '@/features/projects/model'
 import { useUnits } from '@/features/client/units'
 import { SourceBadge, SourceLegend } from './provenance'
 import { buildingHeight, fetchAreas, fetchPois, fetchPoisAround, POI_META, snapBBox, type BBox, type LngLat, type OsmArea, type OsmPoi, type PoiCategory } from './osm'
-import { fmtKm, geocode, haversineKm } from './geo'
-import { LOCALITY_COORDS, VIEWS } from './places'
+import { fmtKm, geocode, haversineKm, reverseGeocode, searchPlaces } from './geo'
+import { INDIA_MAX_BOUNDS, LOCALITY_COORDS, VIEWS } from './places'
 import { describe, type Described, type Selection } from './describe'
 import { InfoPanel } from './InfoPanel'
+import { dropGoogleSession, GOOGLE_ATTRIBUTION, googleSession, googleTileUrl, hasGoogle } from './google'
+import { Google3DView } from './Google3DView'
+import { FLOOR_HEIGHT_M, footprint, useAssets } from '@/features/assets/store'
+
+import { AssetPanel, useAssetSurroundings } from '@/features/assets/AssetPanel'
+import { saveAsset } from '@/features/assets/store'
+import type { AssetLayerHandle } from '@/features/assets/mapModelLayer'
+import type { Asset } from '@/features/assets/store'
 import { interpret, type MapQuery } from './aiSearch'
 
 /* ── Constants ─────────────────────────────────────────────────── */
 
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services'
-const BASEMAPS = {
-  satellite: { label: 'Satellite', tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`], attribution: 'Imagery © Esri, Maxar' },
-  street: { label: 'Street', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], attribution: '© OpenStreetMap contributors' },
-} as const
+/** OpenFreeMap: free, keyless vector tiles of OpenStreetMap for the whole planet. */
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
+const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+const BASEMAPS = { map: { label: 'Map' }, satellite: { label: 'Satellite' } } as const
 type Basemap = keyof typeof BASEMAPS
+
+/**
+ * India's boundary as shown on Survey of India maps. OpenStreetMap tiles draw the de facto Line of Control
+ * and LAC, so the tiles' country borders are hidden and replaced by Natural Earth's India point-of-view borders
+ * (public/geo/india-borders.geojson). State/district lines from the tiles are hidden inside this box, where they
+ * would otherwise trace the same de facto lines.
+ */
+const NORTH_DISPUTED_BOX: GeoJSON.Polygon = {
+  type: 'Polygon',
+  coordinates: [
+    [
+      [72.4, 32.2],
+      [80.7, 32.2],
+      [80.7, 37.3],
+      [72.4, 37.3],
+      [72.4, 32.2],
+    ],
+  ],
+}
+/** Region labels the tiles place inside Indian territory under other names. */
+const HIDDEN_REGION_LABELS = ['Gilgit-Baltistan', 'Azad Kashmir', 'Azad Jammu and Kashmir']
 
 const ZONE_COLOR: Record<string, string> = { sez: '#b8894f', dta: '#6f8597', residential: '#7f9a78', social: '#a07f9b', utility: '#9a958c' }
 const LANDUSE_COLOR = ['match', ['get', 'landuse'], 'construction', '#d97706', 'commercial', '#2563eb', 'retail', '#2563eb', 'residential', '#16a34a', 'industrial', '#7c3aed', 'grass', '#65a30d', '#94a3b8'] as unknown as string
@@ -88,12 +120,15 @@ export default function MapPage() {
   const { units, properties } = useUnits()
   const projects = useMemo(() => properties ?? [], [properties])
 
-  const [basemap, setBasemap] = useState<Basemap>('satellite')
-  const [is3d, setIs3d] = useState(true)
+  const geolocate = useRef<maplibregl.GeolocateControl | null>(null)
+  const pinSeq = useRef(0)
+
+  const [basemap, setBasemap] = useState<Basemap>('map')
+  const [is3d, setIs3d] = useState(false)
   const [layers, setLayers] = useState<Layers>({
     osmBuildings: true,
-    osmLanduse: true,
-    osmRoads: true,
+    osmLanduse: false,
+    osmRoads: false,
     projects: true,
     demoParcels: true,
     demoBuildings: false,
@@ -103,7 +138,27 @@ export default function MapPage() {
   const [zones, setZones] = useState<Set<string>>(() => new Set(Object.keys(ZONES)))
   const [filter, setFilter] = useState<ProjectFilter>({ status: 'all', bhk: null, maxCr: null })
   const [osmStatus, setOsmStatus] = useState<OsmStatus>('idle')
-  const [zoom, setZoom] = useState(15.4)
+  const [zoom, setZoom] = useState<number>(VIEWS.gujarat.zoom)
+  const [provider, setProvider] = useState<'google' | 'osm'>(hasGoogle ? 'google' : 'osm')
+  const [googleNote, setGoogleNote] = useState<string | null>(null)
+  const [view3d, setView3d] = useState<{ center: LngLat; zoom: number; title?: string } | null>(null)
+  const [openAsset, setOpenAsset] = useState<string | null>(null)
+  const [assetFloor, setAssetFloor] = useState<number | null>(null)
+  const [assetHover, setAssetHover] = useState<number | null>(null)
+  const [assetMode, setAssetMode] = useState<'real' | 'data'>('real')
+  const [adjusting, setAdjusting] = useState(false)
+  const [focusUnit, setFocusUnit] = useState<string | null>(null)
+  const [assetLayerReady, setAssetLayerReady] = useState(0)
+  const assetLayerRef = useRef<AssetLayerHandle | null>(null)
+  const adjustingRef = useRef(false)
+  adjustingRef.current = adjusting
+  const dragRef = useRef<{ dLng: number; dLat: number; center: LngLat } | null>(null)
+  const assets = useAssets()
+  const [params] = useSearchParams()
+  const osmBase = useRef(new Map<string, boolean>())
+  const googleUrl = useRef('')
+  const [locating, setLocating] = useState(false)
+  const [locateError, setLocateError] = useState<string | null>(null)
   const [sel, setSel] = useState<Selection | null>(null)
   const [compare, setCompare] = useState<Described[]>([])
   const [compareOpen, setCompareOpen] = useState(false)
@@ -118,31 +173,132 @@ export default function MapPage() {
 
   const described = useMemo(() => (sel ? describe(sel) : null), [sel])
 
+  /* ── Real location: dropped pins and GPS ───────────────────── */
+
+  /** Select a point on the map, then fill in its nearest address. */
+  const dropPin = (center: LngLat, how: 'click' | 'gps', accuracyM?: number) => {
+    const seq = ++pinSeq.current
+    setSel({ kind: 'place', name: how === 'gps' ? 'You are here' : 'Dropped pin', center, how, accuracyM, loading: true })
+    void reverseGeocode(center).then((hit) => {
+      if (seq !== pinSeq.current) return
+      setSel((s) =>
+        s?.kind === 'place' && s.center === center
+          ? { ...s, name: how === 'gps' ? 'You are here' : (hit?.name ?? 'Dropped pin'), osmId: hit?.osmId, address: hit?.address, loading: false }
+          : s,
+      )
+    })
+  }
+  const dropPinRef = useRef(dropPin)
+  dropPinRef.current = dropPin
+
+  const locateMe = () => {
+    setLocateError(null)
+    if (!('geolocation' in navigator)) return setLocateError('This browser cannot share its location.')
+    setLocating(true)
+    if (!geolocate.current?.trigger()) setLocating(false)
+  }
+
   /* ── Map setup ─────────────────────────────────────────────── */
 
   useEffect(() => {
     if (!container.current) return
     const map = new maplibregl.Map({
       container: container.current,
-      style: {
-        version: 8,
-        sources: { base: { type: 'raster', tiles: [...BASEMAPS.satellite.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.satellite.attribution } },
-        layers: [{ id: 'base', type: 'raster', source: 'base', paint: { 'raster-saturation': -0.3, 'raster-brightness-max': 0.92 } }],
-      },
-      center: VIEWS.gift.center,
-      zoom: VIEWS.gift.zoom,
-      pitch: 55,
-      bearing: -25,
+      style: STYLE_URL,
+      center: VIEWS.gujarat.center,
+      zoom: VIEWS.gujarat.zoom,
       maxZoom: 19,
-      minZoom: 8,
-      attributionControl: { compact: true, customAttribution: 'Map data © OpenStreetMap contributors · Routing OSRM' },
+      minZoom: 3,
+      maxPitch: 70,
+      maxBounds: INDIA_MAX_BOUNDS,
+      attributionControl: { compact: true, customAttribution: 'Search: Nominatim · Routing: OSRM' },
     })
     mapRef.current = map
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
+    const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 15000 }, showAccuracyCircle: true, fitBoundsOptions: { maxZoom: 16.5 } })
+    geolocate.current = geo
+    map.addControl(geo, 'bottom-right')
+    geo.on('geolocate', (pos: GeolocationPosition) => {
+      setLocating(false)
+      dropPinRef.current([pos.coords.longitude, pos.coords.latitude], 'gps', pos.coords.accuracy)
+    })
+    geo.on('error', (err: GeolocationPositionError) => {
+      setLocating(false)
+      setLocateError(err.code === 1 ? 'Location permission was denied. Allow it in the browser to see where you are.' : 'Could not get your location. Try again outdoors or check location services.')
+    })
+    geo.on('outofmaxbounds', () => {
+      setLocating(false)
+      setLocateError('Your location is outside the area this map covers.')
+    })
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
 
     map.on('load', () => {
       const empty = { type: 'FeatureCollection' as const, features: [] }
+      const styleLayers = map.getStyle().layers
+      const firstSymbol = styleLayers.find((l) => l.type === 'symbol')?.id
+      const firstRoad = styleLayers.find((l) => 'source-layer' in l && l['source-layer'] === 'transportation')?.id
+
+      // Satellite imagery sits under roads and labels, so "Satellite" reads like a hybrid view.
+      map.addSource('satellite', { type: 'raster', tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' })
+      map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', layout: { visibility: 'none' }, paint: { 'raster-saturation': -0.15 } }, firstRoad)
+
+      // Official India boundary in place of the tiles' de facto lines.
+      for (const id of ['boundary_2', 'boundary_disputed']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none')
+      if (map.getLayer('boundary_3')) {
+        const lvl = ['get', 'admin_level']
+        const land = ['!=', ['get', 'maritime'], 1]
+        const outsideNorth = ['!', ['within', NORTH_DISPUTED_BOX]]
+        // States: solid line from the national view down.
+        map.addLayer(
+          {
+            id: 'state-borders',
+            type: 'line',
+            source: 'openmaptiles',
+            'source-layer': 'boundary',
+            filter: ['all', ['==', lvl, 4], land, outsideNorth] as unknown as maplibregl.FilterSpecification,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#8e7fa6', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.4, 12, 2.6] },
+          },
+          'boundary_3',
+        )
+        // Districts (level 5) from ~zoom 6.5 and talukas (level 6) from ~8.5, dashed.
+        map.setFilter('boundary_3', ['all', ['>=', lvl, 5], ['<=', lvl, 6], land, outsideNorth] as unknown as maplibregl.FilterSpecification)
+        map.setPaintProperty('boundary_3', 'line-color', '#a39e98')
+        map.setPaintProperty('boundary_3', 'line-dasharray', [3, 2])
+        map.setPaintProperty('boundary_3', 'line-width', ['interpolate', ['linear'], ['zoom'], 6, ['match', lvl, 5, 0.8, 0.5], 12, ['match', lvl, 5, 1.6, 1.1]])
+        map.setPaintProperty('boundary_3', 'line-opacity', ['interpolate', ['linear'], ['zoom'], 6, 0, 7, ['match', lvl, 5, 0.75, 0], 8.5, ['match', lvl, 5, 0.75, 0], 9.5, 0.75])
+      }
+      if (map.getLayer('label_state')) {
+        const f = map.getFilter('label_state')
+        const names = ['literal', HIDDEN_REGION_LABELS]
+        map.setFilter('label_state', [
+          'all',
+          ...(f ? [f] : []),
+          ['!', ['in', ['coalesce', ['get', 'name_en'], ''], names]],
+          ['!', ['in', ['coalesce', ['get', 'name'], ''], names]],
+        ] as unknown as maplibregl.FilterSpecification)
+      }
+      // Remember the OpenStreetMap style's own layers (and whether each is on) so they can be swapped for Google tiles.
+      for (const l of styleLayers) osmBase.current.set(l.id, map.getLayoutProperty(l.id, 'visibility') !== 'none')
+      // Repeated Google tile failures (expired session, quota, key restriction): fall back once, no retry loop.
+      let googleErrors = 0
+      map.on('error', (e) => {
+        if ((e as { sourceId?: string }).sourceId !== 'google' || ++googleErrors !== 8) return
+        dropGoogleSession('roadmap')
+        dropGoogleSession('satellite')
+        setGoogleNote('Google map tiles stopped loading (key, quota or billing). Showing OpenStreetMap instead.')
+        setProvider('osm')
+      })
+      map.addSource('india-borders', { type: 'geojson', data: new URL('/geo/india-borders.geojson', window.location.origin).href, attribution: 'Borders: Natural Earth (India view)' })
+      map.addLayer(
+        { id: 'country-border-halo', type: 'line', source: 'india-borders', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-opacity': 0.55, 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 2.5, 10, 6] } },
+        firstSymbol,
+      )
+      map.addLayer(
+        { id: 'country-border', type: 'line', source: 'india-borders', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6d5f86', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1, 6, 1.6, 12, 3] } },
+        firstSymbol,
+      )
+
       // Demo (illustrative GIFT City plan)
       map.addSource('demo-parcels', {
         type: 'geojson',
@@ -165,33 +321,28 @@ export default function MapPage() {
       map.addSource('highlight', { type: 'geojson', data: empty })
       map.addSource('search-radius', { type: 'geojson', data: empty })
 
-      map.addLayer({ id: 'osm-landuse', type: 'fill', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'landuse'], paint: { 'fill-color': LANDUSE_COLOR, 'fill-opacity': 0.18 } })
-      map.addLayer({ id: 'osm-landuse-line', type: 'line', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'landuse'], paint: { 'line-color': LANDUSE_COLOR, 'line-width': 1, 'line-opacity': 0.6 } })
-      map.addLayer({ id: 'demo-parcels-fill', type: 'fill', source: 'demo-parcels', paint: { 'fill-color': '#c026d3', 'fill-opacity': 0.12 } })
-      map.addLayer({ id: 'demo-parcels-line', type: 'line', source: 'demo-parcels', paint: { 'line-color': '#c026d3', 'line-width': 1.5, 'line-dasharray': [2, 1.5] } })
-      map.addLayer({
-        id: 'osm-roads',
-        type: 'line',
-        source: 'osm-areas',
-        filter: ['==', ['get', 'kind'], 'road'],
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#fbbf24', 'line-opacity': 0.75, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1, 17, 5] },
-      })
-      map.addLayer({ id: 'osm-roads-hit', type: 'line', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'road'], paint: { 'line-color': '#000', 'line-opacity': 0, 'line-width': 14 } })
-      map.addLayer({
-        id: 'osm-buildings',
-        type: 'fill-extrusion',
-        source: 'osm-areas',
-        filter: ['==', ['get', 'kind'], 'building'],
-        paint: {
-          'fill-extrusion-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#f59e0b', ['boolean', ['get', 'named'], false], '#e7e2d8', '#cfc8bb'],
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-opacity': 0.92,
+      // Area overlays go under the base map's labels; points and highlights go on top.
+      map.addLayer({ id: 'osm-landuse', type: 'fill', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'landuse'], paint: { 'fill-color': LANDUSE_COLOR, 'fill-opacity': 0.18 } }, firstSymbol)
+      map.addLayer({ id: 'osm-landuse-line', type: 'line', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'landuse'], paint: { 'line-color': LANDUSE_COLOR, 'line-width': 1, 'line-opacity': 0.6 } }, firstSymbol)
+      map.addLayer({ id: 'demo-parcels-fill', type: 'fill', source: 'demo-parcels', paint: { 'fill-color': '#c026d3', 'fill-opacity': 0.12 } }, firstSymbol)
+      map.addLayer({ id: 'demo-parcels-line', type: 'line', source: 'demo-parcels', paint: { 'line-color': '#c026d3', 'line-width': 1.5, 'line-dasharray': [2, 1.5] } }, firstSymbol)
+      map.addLayer(
+        {
+          id: 'osm-roads',
+          type: 'line',
+          source: 'osm-areas',
+          filter: ['==', ['get', 'kind'], 'road'],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#fbbf24', 'line-opacity': 0.75, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1, 17, 5] },
         },
-      })
+        firstSymbol,
+      )
+      // Invisible hit targets: the base map draws roads and buildings; these make them clickable with full OSM details.
+      map.addLayer({ id: 'osm-roads-hit', type: 'line', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'road'], paint: { 'line-color': '#000', 'line-opacity': 0, 'line-width': 14 } })
+      map.addLayer({ id: 'osm-buildings', type: 'fill', source: 'osm-areas', filter: ['==', ['get', 'kind'], 'building'], paint: { 'fill-color': '#000', 'fill-opacity': 0 } })
       map.addLayer({ id: 'demo-buildings', type: 'fill-extrusion', source: 'demo-buildings', layout: { visibility: 'none' }, paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.75 } })
       map.addLayer({ id: 'demo-infra', type: 'circle', source: 'demo-infra', layout: { visibility: 'none' }, paint: { 'circle-radius': 6, 'circle-color': '#c026d3', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } })
-      map.addLayer({ id: 'search-radius', type: 'line', source: 'search-radius', paint: { 'line-color': '#c49a63', 'line-width': 2, 'line-dasharray': [2, 2] } })
+      map.addLayer({ id: 'search-radius', type: 'line', source: 'search-radius', paint: { 'line-color': '#c49a63', 'line-width': 2, 'line-dasharray': [2, 2] } }, firstSymbol)
       map.addLayer({
         id: 'osm-pois',
         type: 'circle',
@@ -202,6 +353,13 @@ export default function MapPage() {
           'circle-stroke-color': '#ffffff',
           'circle-stroke-width': 1.5,
         },
+      })
+      map.addLayer({
+        id: 'highlight-extrusion',
+        type: 'fill-extrusion',
+        source: 'highlight',
+        filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['has', 'height']],
+        paint: { 'fill-extrusion-color': '#f59e0b', 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.9 },
       })
       map.addLayer({ id: 'highlight-fill', type: 'fill', source: 'highlight', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.25 } })
       map.addLayer({ id: 'highlight-line', type: 'line', source: 'highlight', paint: { 'line-color': '#f59e0b', 'line-width': 3 } })
@@ -214,6 +372,14 @@ export default function MapPage() {
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: 'reos-tip' })
     const HOVER = ['osm-pois', 'demo-infra', 'osm-buildings', 'demo-buildings', 'osm-roads-hit', 'demo-parcels-fill', 'osm-landuse']
     map.on('mousemove', (e) => {
+      if (dragRef.current) return
+      const hit = assetLayerRef.current?.pick(e.point)
+      setAssetHover(hit ? hit.floor : null)
+      if (hit) {
+        map.getCanvas().style.cursor = adjustingRef.current ? 'move' : 'pointer'
+        popup.setLngLat(e.lngLat).setHTML(adjustingRef.current ? '<b>Drag to move the building</b>' : hit.tip).addTo(map)
+        return
+      }
       const f = map.getLayer('osm-pois') ? map.queryRenderedFeatures(e.point, { layers: HOVER.filter((l) => map.getLayer(l)) })[0] : undefined
       map.getCanvas().style.cursor = f ? 'pointer' : ''
       const label = f ? tooltipFor(f, areas.current, pois.current) : null
@@ -326,10 +492,18 @@ export default function MapPage() {
     if (!map || !ready) return
     const ORDER = ['osm-pois', 'demo-infra', 'osm-buildings', 'demo-buildings', 'osm-roads-hit', 'demo-parcels-fill', 'osm-landuse']
     const onClick = (e: maplibregl.MapMouseEvent) => {
+      const hit = assetLayerRef.current?.pick(e.point)
+      if (hit) {
+        if (adjustingRef.current) return
+        if (hit.office && hit.unitId) setFocusUnit(hit.unitId)
+        else setAssetFloor((cur) => (cur === hit.floor ? null : hit.floor))
+        return
+      }
       const layersOn = ORDER.filter((l) => map.getLayer(l) && map.getLayoutProperty(l, 'visibility') !== 'none')
       const hits = map.queryRenderedFeatures(e.point, { layers: layersOn })
       const f = ORDER.map((l) => hits.find((h) => h.layer.id === l)).find(Boolean)
-      if (!f) return setSel(null)
+      // Empty spot: show the real address of the point, like dropping a pin.
+      if (!f) return dropPinRef.current([e.lngLat.lng, e.lngLat.lat], 'click')
       const id = String(f.properties?.id)
       switch (f.layer.id) {
         case 'osm-pois': {
@@ -371,7 +545,6 @@ export default function MapPage() {
     vis('osm-landuse', layers.osmLanduse)
     vis('osm-landuse-line', layers.osmLanduse)
     vis('osm-roads', layers.osmRoads)
-    vis('osm-roads-hit', layers.osmRoads)
     vis('demo-parcels-fill', layers.demoParcels)
     vis('demo-parcels-line', layers.demoParcels)
     vis('demo-buildings', layers.demoBuildings)
@@ -381,10 +554,56 @@ export default function MapPage() {
     for (const l of ['demo-parcels-fill', 'demo-parcels-line', 'demo-buildings']) map.setFilter(l, zoneFilter)
   }, [layers, poiCats, zones, ready])
 
+  /* ── Base map: Google tiles (preferred) or OpenStreetMap ────── */
+
   useEffect(() => {
-    const src = mapRef.current?.getSource('base') as maplibregl.RasterTileSource | undefined
-    src?.setTiles([...BASEMAPS[basemap].tiles])
-  }, [basemap, ready])
+    const map = mapRef.current
+    if (!map || !ready) return
+    const vis = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none')
+    const sat = basemap === 'satellite'
+    const showOsm = (on: boolean) => {
+      for (const [id, v] of osmBase.current) vis(id, on && v)
+      for (const id of ['country-border', 'country-border-halo', 'state-borders']) vis(id, on)
+      vis('satellite', on && sat)
+      if (on) {
+        // OSM satellite: Esri imagery replaces drawn land, water and flat buildings; roads and labels stay on top.
+        for (const id of ['road_area_pattern', 'aeroway_fill', 'park_outline']) vis(id, !sat)
+        map.setPaintProperty('country-border', 'line-color', sat ? '#f5d0fe' : '#6d5f86')
+        map.setPaintProperty('country-border-halo', 'line-color', sat ? '#1c1917' : '#ffffff')
+      }
+      vis('building', on && layers.osmBuildings && !sat)
+      // 3D extrusions (OSM building heights) also work over Google tiles.
+      vis('building-3d', layers.osmBuildings && (on ? !sat || is3d : is3d))
+    }
+    if (provider === 'osm') {
+      vis('google', false)
+      showOsm(true)
+      return
+    }
+    let live = true
+    googleSession(sat ? 'satellite' : 'roadmap')
+      .then((session) => {
+        if (!live) return
+        const url = googleTileUrl(session)
+        const src = map.getSource('google') as maplibregl.RasterTileSource | undefined
+        if (!src) {
+          map.addSource('google', { type: 'raster', tiles: [url], tileSize: 256, maxzoom: 20, attribution: GOOGLE_ATTRIBUTION })
+          // Directly above the background, so every overlay and 3D building draws on top.
+          map.addLayer({ id: 'google', type: 'raster', source: 'google' }, map.getStyle().layers[1]?.id)
+        } else if (googleUrl.current !== url) src.setTiles([url])
+        googleUrl.current = url
+        vis('google', true)
+        showOsm(false)
+      })
+      .catch((err: unknown) => {
+        if (!live) return
+        setGoogleNote(`${err instanceof Error ? err.message : 'Google map unavailable'}. Showing OpenStreetMap instead.`)
+        setProvider('osm')
+      })
+    return () => {
+      live = false
+    }
+  }, [provider, basemap, layers.osmBuildings, is3d, ready])
 
   useEffect(() => {
     mapRef.current?.easeTo({ pitch: is3d ? 55 : 0, bearing: is3d ? -25 : 0, duration: 800 })
@@ -422,6 +641,226 @@ export default function MapPage() {
     }
   }, [projects, layers.projects, projectMatches, ready, units])
 
+  /* ── Asset register: 3D blocks, names and pins (live: admin saves show up immediately) ── */
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    const data: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: assets.map((a) => ({
+        type: 'Feature',
+        properties: { id: a.id, name: a.name, height: 4.8 + a.floors * FLOOR_HEIGHT_M },
+        geometry: { type: 'Polygon', coordinates: [footprint(a)] },
+      })),
+    }
+    const src = map.getSource('assets') as GeoJSONSource | undefined
+    if (src) src.setData(data)
+    else {
+      map.addSource('assets', { type: 'geojson', data })
+      // A thin footprint outline on the ground; the realistic 3D building appears when the asset is opened.
+      map.addLayer({
+        id: 'assets-3d',
+        type: 'line',
+        source: 'assets',
+        minzoom: 14,
+        paint: { 'line-color': '#d97706', 'line-width': 2, 'line-dasharray': [2, 1.5], 'line-opacity': 0.9 },
+      })
+    }
+    if (map.getLayer('assets-3d')) map.setFilter('assets-3d', ['!=', ['get', 'id'], openAsset ?? ''])
+    const pins = assets.filter((a) => a.id !== openAsset).map((a) => {
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.className = 'reos-marker is-building'
+      el.setAttribute('aria-label', `${a.name}: open 3D building and offices`)
+      const name = a.name.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+      el.innerHTML = `<span class="reos-marker-dot"></span><span class="reos-marker-label"><b>${name}</b> 3D · ${a.units.length} offices</span>`
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        openAssetRef.current(a.id)
+      })
+      return new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(a.center).addTo(map)
+    })
+    return () => pins.forEach((m) => m.remove())
+  }, [assets, ready, openAsset])
+
+  /** Open an asset in place on the map: fly to it in 3D and show its panel. */
+  function openAssetOnMap(id: string) {
+    const a = assets.find((x) => x.id === id)
+    if (!a) return
+    setSel(null)
+    setAssetFloor(null)
+    setOpenAsset(id)
+    setIs3d(true)
+    // After the 2D/3D tilt animation, which would otherwise cancel the flight.
+    setTimeout(
+      () =>
+        mapRef.current?.flyTo({
+          center: a.center,
+          zoom: 17.4,
+          pitch: 62,
+          bearing: -28,
+          duration: 1800,
+          padding: { right: window.innerWidth >= 1024 ? 420 : 0, left: window.innerWidth >= 1024 ? 360 : 0, top: 0, bottom: window.innerWidth < 1024 ? window.innerHeight * 0.4 : 0 },
+        }),
+      850,
+    )
+  }
+  const openAssetRef = useRef(openAssetOnMap)
+  openAssetRef.current = openAssetOnMap
+
+  // A normal map selection closes the asset panel (they share the right column).
+  useEffect(() => {
+    if (sel) setOpenAsset(null)
+  }, [sel])
+
+  // The realistic 3D building, rendered inside the map (three.js custom layer, loaded on demand).
+  const activeAsset = openAsset ? (assets.find((a) => a.id === openAsset) ?? null) : null
+  const shapeKey = activeAsset ? [activeAsset.id, activeAsset.model, activeAsset.floors, activeAsset.perFloorSqft, activeAsset.name].join('|') : ''
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready || !activeAsset) return
+    let live = true
+    let handle: AssetLayerHandle | null = null
+    let baseFilter: maplibregl.FilterSpecification | undefined
+    let hidden = false
+    // Hide the plain map building(s) under the model so the two don't overlap.
+    const hideUnderlying = () => {
+      if (!handle || !map.getLayer('building-3d')) return
+      const a = assets.find((x) => x.id === activeAsset.id) ?? activeAsset
+      const pts = footprint(a).slice(0, 4).concat([a.center]).map((p) => map.project(p))
+      const ids = new Set<string | number>()
+      for (const p of pts) for (const f of map.queryRenderedFeatures(p, { layers: ['building-3d'] })) if (f.id != null) ids.add(f.id)
+      if (!hidden) baseFilter = map.getFilter('building-3d') ?? undefined
+      hidden = true
+      const not = ['!', ['in', ['id'], ['literal', [...ids]]]]
+      map.setFilter('building-3d', (baseFilter ? ['all', baseFilter, not] : not) as maplibregl.FilterSpecification)
+    }
+    void import('@/features/assets/mapModelLayer').then(({ createAssetLayer }) => {
+      if (!live) return
+      handle = createAssetLayer(map, activeAsset, 'highlight-extrusion', (unitId) => setFocusUnit(unitId))
+      handle.setPlacement(activeAsset.center, activeAsset.rotationDeg ?? 0)
+      assetLayerRef.current = handle
+      setAssetLayerReady((n) => n + 1)
+      map.once('idle', hideUnderlying)
+    })
+    const onMoveEnd = () => map.once('idle', hideUnderlying)
+    map.on('moveend', onMoveEnd)
+    return () => {
+      live = false
+      map.off('moveend', onMoveEnd)
+      handle?.remove()
+      if (assetLayerRef.current === handle) assetLayerRef.current = null
+      try {
+        if (hidden && map.getLayer('building-3d')) map.setFilter('building-3d', baseFilter ?? null)
+      } catch {
+        /* map already destroyed */
+      }
+    }
+    // Rebuilt only when the building's shape changes; position and offices update in place below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shapeKey, ready])
+  useEffect(() => {
+    if (!activeAsset || !assetLayerRef.current) return
+    assetLayerRef.current.update({
+      selected: assetFloor,
+      hovered: assetHover,
+      mode: assetMode,
+      counts: unitCountsOf(activeAsset),
+      floorUnits: assetFloor == null ? [] : activeAsset.units.filter((u) => u.floor === assetFloor),
+    })
+  }, [activeAsset, assetFloor, assetHover, assetMode, assetLayerReady])
+  // Opening a floor zooms in so its offices and labels are readable.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || assetFloor == null || !activeAsset) return
+    if (map.getZoom() < 18) {
+      map.easeTo({
+        center: activeAsset.center,
+        zoom: 18.4,
+        pitch: Math.max(map.getPitch(), 55),
+        duration: 1000,
+        padding: { right: window.innerWidth >= 1024 ? 420 : 0, left: window.innerWidth >= 1024 ? 360 : 0, top: 0, bottom: window.innerWidth < 1024 ? window.innerHeight * 0.4 : 0 },
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetFloor])
+  // A different floor (or asset) clears the focused office.
+  useEffect(() => setFocusUnit(null), [assetFloor, openAsset])
+  useEffect(() => assetLayerRef.current?.focusOffice(focusUnit), [focusUnit, assetLayerReady])
+  useEffect(() => {
+    if (activeAsset && assetLayerRef.current && !dragRef.current) assetLayerRef.current.setPlacement(activeAsset.center, activeAsset.rotationDeg ?? 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAsset?.center[0], activeAsset?.center[1], activeAsset?.rotationDeg, assetLayerReady])
+
+  // Real exterior scan (drone photogrammetry), when one has been uploaded for this asset.
+  useEffect(() => {
+    const handle = assetLayerRef.current
+    if (!handle || !activeAsset) return
+    if (!activeAsset.exteriorScanId) return handle.setExterior(null)
+    let live = true
+    let obj: import('three').Object3D | null = null
+    void import('@/features/assets/scanLoader')
+      .then((m) => m.loadScan(activeAsset.exteriorScanId!, activeAsset.scanScale ?? 1))
+      .then((o) => {
+        if (!live) return
+        obj = o
+        handle.setExterior(o)
+      })
+      .catch(() => live && setGoogleNote('The 3D scan for this asset could not be loaded; showing the generated model.'))
+    return () => {
+      live = false
+      if (obj) handle.setExterior(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAsset?.exteriorScanId, activeAsset?.scanScale, assetLayerReady])
+
+  // Adjust mode: drag the building to its real spot (saved when released).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready || !adjusting || !activeAsset) return
+    const onDown = (e: maplibregl.MapMouseEvent) => {
+      if (!assetLayerRef.current?.pick(e.point)) return
+      e.preventDefault()
+      map.dragPan.disable()
+      const a = assets.find((x) => x.id === activeAsset.id) ?? activeAsset
+      dragRef.current = { dLng: e.lngLat.lng - a.center[0], dLat: e.lngLat.lat - a.center[1], center: a.center }
+    }
+    const onMove = (e: maplibregl.MapMouseEvent) => {
+      const d = dragRef.current
+      if (!d) return
+      d.center = [e.lngLat.lng - d.dLng, e.lngLat.lat - d.dLat]
+      assetLayerRef.current?.setPlacement(d.center, activeAsset.rotationDeg ?? 0)
+    }
+    const onUp = () => {
+      const d = dragRef.current
+      if (!d) return
+      dragRef.current = null
+      map.dragPan.enable()
+      const a = assets.find((x) => x.id === activeAsset.id) ?? activeAsset
+      saveAsset({ ...a, center: d.center })
+    }
+    map.on('mousedown', onDown)
+    map.on('mousemove', onMove)
+    map.on('mouseup', onUp)
+    return () => {
+      map.off('mousedown', onDown)
+      map.off('mousemove', onMove)
+      map.off('mouseup', onUp)
+      map.dragPan.enable()
+      dragRef.current = null
+    }
+  }, [adjusting, ready, activeAsset, assets])
+
+  // /map?asset=<id> (from the admin page): fly to that asset.
+  useEffect(() => {
+    const id = params.get('asset')
+    const a = id ? assets.find((x) => x.id === id) : undefined
+    if (!ready || !a) return
+    openAssetRef.current(a.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, params])
+
   /* ── Selection highlight & camera ───────────────────────────── */
 
   useEffect(() => {
@@ -433,10 +872,13 @@ export default function MapPage() {
       return
     }
     let geometry: GeoJSON.Geometry = { type: 'Point', coordinates: described.center }
+    let properties: Record<string, number> = {}
     if (sel.kind === 'osm') geometry = sel.area.geometry
+    // Selected buildings are drawn as a slightly taller amber block over the base map's 3D building.
+    if (sel.kind === 'osm' && sel.area.kind === 'building') properties = { height: buildingHeight(sel.area.tags).m + 0.6 }
     if (sel.kind === 'demo-parcel') geometry = { type: 'Polygon', coordinates: [ring(sel.parcel.polygon)] }
     if (sel.kind === 'demo-building') geometry = { type: 'Polygon', coordinates: [ring(sel.building.polygon)] }
-    src.setData({ type: 'Feature', properties: {}, geometry })
+    src.setData({ type: 'Feature', properties, geometry })
     for (const m of markers.current.values()) m.getElement().classList.remove('is-active')
     if (sel.kind === 'project') markers.current.get(sel.property._id)?.getElement().classList.add('is-active')
   }, [sel, described, ready])
@@ -450,9 +892,10 @@ export default function MapPage() {
     })
 
   const select = (s: Selection, fly = true) => {
+    pinSeq.current++ // a pending address lookup must not overwrite this selection
     setSel(s)
     setMobilePanel(false)
-    if (fly) flyTo(describe(s).center)
+    if (fly) flyTo(describe(s).center, s.kind === 'place' ? s.zoom : undefined)
   }
 
   const toggleCompare = (d: Described) =>
@@ -501,11 +944,20 @@ export default function MapPage() {
           ...[...areas.current.values()].filter((a) => a.name?.toLowerCase().includes(t)).slice(0, 8).map((a) => ({ key: a.id, title: a.name!, subtitle: a.kind === 'building' ? 'Building' : a.kind === 'road' ? 'Road' : 'Land use', sel: { kind: 'osm', area: a } as Selection })),
           ...PARCELS.filter((p) => p.id.toLowerCase().includes(t)).map((p) => ({ key: p.id, title: p.id, subtitle: 'Plot (demo)', sel: { kind: 'demo-parcel', parcel: p } as Selection })),
         ]
-        if (!items.length) {
-          const g = await geocode(text)
-          if (g) items.push({ key: 'geo', title: g.name, subtitle: 'Place · OpenStreetMap', sel: { kind: 'place', name: g.name, center: g.center, osmId: g.osmId } })
+        if (items.length < 3) {
+          // Places anywhere in India, ranked toward what is on screen.
+          const b = mapRef.current?.getBounds()
+          const hits = await searchPlaces(text, b ? { w: b.getWest(), s: b.getSouth(), e: b.getEast(), n: b.getNorth() } : undefined)
+          hits.forEach((g, i) =>
+            items.push({
+              key: `geo:${g.osmId ?? i}`,
+              title: g.name,
+              subtitle: g.label || 'Place',
+              sel: { kind: 'place', name: g.name, center: g.center, osmId: g.osmId, address: g.address, zoom: g.zoom, how: 'search' },
+            }),
+          )
         }
-        setResults({ items, note: items.length ? undefined : 'No matches. Try a locality, building or project name.' })
+        setResults({ items, note: items.length ? undefined : 'No matches. Try a city, locality, landmark or project name.' })
         if (items.length === 1) select(items[0]!.sel)
         return
       }
@@ -518,7 +970,7 @@ export default function MapPage() {
       if (q.near && !anchor) note = `Couldn't find "${q.near}" on the map; showing results without a location filter.`
 
       if (q.target === 'place' && anchor) {
-        items.push({ key: 'anchor', title: anchor.name, subtitle: 'Place', sel: { kind: 'place', name: anchor.name, center: anchor.center } })
+        items.push({ key: 'anchor', title: anchor.name, subtitle: 'Place', sel: { kind: 'place', name: anchor.name, center: anchor.center, how: 'search' } })
       } else if (q.target === 'amenities') {
         const c = anchor?.center ?? (mapRef.current!.getCenter().toArray() as LngLat)
         try {
@@ -600,7 +1052,7 @@ export default function MapPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search or ask: 3 BHK under 2 Cr near a metro"
+            placeholder="Search any place in India, or ask: 3 BHK under 2 Cr"
             className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             aria-label="Search the map"
           />
@@ -668,10 +1120,46 @@ export default function MapPage() {
               </div>
             </Group>
 
-            <Group title="OpenStreetMap" source="verified" hint={zoom < 13.5 ? 'Zoom in to load buildings, land use and roads.' : undefined}>
+            {hasGoogle && (
+              <Group title="Map data">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(
+                    [
+                      ['google', 'Google'],
+                      ['osm', 'OpenStreetMap'],
+                    ] as const
+                  ).map(([k, label]) => (
+                    <button
+                      key={k}
+                      onClick={() => (setGoogleNote(null), setProvider(k))}
+                      aria-pressed={provider === k}
+                      className={cn('h-8 rounded-md border text-xs', provider === k ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:bg-accent')}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
+                  {provider === 'google' ? 'Google map and satellite tiles (India region). Billed per tile by Google.' : 'Free OpenStreetMap tiles. No Google usage.'}
+                </p>
+              </Group>
+            )}
+
+            <Group title="Borders">
+              <p className="px-1.5 text-[11px] leading-snug text-muted-foreground">
+                <span className={cn('mb-1.5 flex items-center gap-3 text-foreground', provider === 'google' && 'hidden')}>
+                  <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[#6d5f86]" /> Country</span>
+                  <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[#8e7fa6]" /> State</span>
+                  <span className="flex items-center gap-1.5"><span className="h-0 w-4 border-t border-dashed border-[#a39e98]" /> District · taluka</span>
+                </span>
+                India&apos;s boundary follows the official Survey of India depiction, including Jammu &amp; Kashmir, Ladakh (with Aksai Chin) and Arunachal Pradesh. District and taluka lines appear as you zoom in.
+              </p>
+            </Group>
+
+            <Group title="OpenStreetMap" source="verified" hint={zoom < 13.5 ? 'Zoom in to click buildings, roads and land use for details.' : undefined}>
               <Toggle on={layers.osmBuildings} onChange={() => toggle('osmBuildings')} label="Buildings (3D)" swatch="#cfc8bb" />
               <Toggle on={layers.osmLanduse} onChange={() => toggle('osmLanduse')} label="Land-use areas" swatch="#65a30d" />
-              <Toggle on={layers.osmRoads} onChange={() => toggle('osmRoads')} label="Roads" swatch="#fbbf24" />
+              <Toggle on={layers.osmRoads} onChange={() => toggle('osmRoads')} label="Highlight major roads" swatch="#fbbf24" />
               <p className="mb-1 mt-3 text-[11px] text-muted-foreground">Infrastructure {zoom < 11.5 && '(zoom in to load)'}</p>
               {(Object.keys(POI_META) as PoiCategory[]).map((c) => (
                 <Toggle
@@ -734,7 +1222,7 @@ export default function MapPage() {
             {!searching && !results && (
               <div className="space-y-2 text-muted-foreground">
                 <p>Try asking:</p>
-                {['3 BHK under 2 Cr', 'Ready to move homes near SG Highway', 'Hospitals near GIFT City', 'Homes near a metro station', 'Schools within 2 km of Bopal'].map((s) => (
+                {['3 BHK under 2 Cr', 'Ready to move homes near SG Highway', 'Hospitals near GIFT City', 'Schools within 2 km of Bopal', 'Hospitals in Vadodara'].map((s) => (
                   <button
                     key={s}
                     onClick={() => {
@@ -800,12 +1288,39 @@ export default function MapPage() {
       <div className="absolute inset-0">
         <div ref={container} className="h-full w-full" />
       </div>
+      {provider === 'google' && ready && (
+        <img
+          src={basemap === 'satellite' ? 'https://maps.gstatic.com/mapfiles/api-3/images/google_white5_hdpi.png' : 'https://maps.gstatic.com/mapfiles/api-3/images/google4_hdpi.png'}
+          alt="Google"
+          className="pointer-events-none absolute bottom-9 left-3 z-[5] h-[18px] w-auto lg:left-[372px]"
+        />
+      )}
+      {view3d && <Google3DView center={view3d.center} zoom={view3d.zoom} title={view3d.title} onClose={() => setView3d(null)} />}
+      {activeAsset && (
+        <MapAssetPanel
+          key={activeAsset.id}
+          asset={activeAsset}
+          assets={assets}
+          selected={assetFloor}
+          onSelect={setAssetFloor}
+          hovered={assetHover}
+          onHover={setAssetHover}
+          mode={assetMode}
+          onMode={setAssetMode}
+          onClose={() => (setOpenAsset(null), setAssetFloor(null), setAdjusting(false))}
+          adjusting={adjusting}
+          onAdjusting={setAdjusting}
+          onRotate={(deg) => saveAsset({ ...activeAsset, rotationDeg: deg })}
+          focusUnitId={focusUnit}
+          onFocusUnit={setFocusUnit}
+        />
+      )}
 
       {/* Desktop side panel */}
       <aside className="absolute bottom-4 left-4 top-4 z-10 hidden w-[340px] overflow-hidden rounded-xl border bg-background/95 shadow-2xl backdrop-blur lg:block">{sidePanel}</aside>
 
       {/* Top controls */}
-      <div className={cn('absolute right-4 top-4 z-10 flex flex-wrap justify-end gap-2 lg:left-[372px] lg:justify-start', sel ? 'lg:right-[424px]' : 'lg:right-4')}>
+      <div className={cn('absolute right-4 top-4 z-10 flex flex-wrap justify-end gap-2 lg:left-[372px] lg:justify-start', sel || activeAsset ? 'lg:right-[436px]' : 'lg:right-4')}>
         <div className="flex overflow-hidden rounded-lg border bg-background/95 text-xs shadow-lg backdrop-blur">
           {(Object.keys(BASEMAPS) as Basemap[]).map((k) => (
             <button key={k} onClick={() => setBasemap(k)} className={cn('px-3 py-2', basemap === k ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}>
@@ -816,14 +1331,56 @@ export default function MapPage() {
             {is3d ? <MapIcon className="size-3.5" /> : <Box className="size-3.5" />} {is3d ? '2D' : '3D'}
           </button>
         </div>
-        <div className="flex overflow-hidden rounded-lg border bg-background/95 text-xs shadow-lg backdrop-blur">
+        <div className="flex max-w-full overflow-x-auto rounded-lg border bg-background/95 text-xs shadow-lg backdrop-blur">
           {(Object.keys(VIEWS) as (keyof typeof VIEWS)[]).map((k) => (
-            <button key={k} onClick={() => mapRef.current?.flyTo({ center: VIEWS[k].center, zoom: VIEWS[k].zoom, duration: 1400 })} className="px-3 py-2 hover:bg-accent">
+            <button key={k} onClick={() => mapRef.current?.flyTo({ center: VIEWS[k].center, zoom: VIEWS[k].zoom, duration: 1400 })} className="shrink-0 whitespace-nowrap px-3 py-2 hover:bg-accent">
               {VIEWS[k].label}
             </button>
           ))}
         </div>
+        <div className="flex overflow-hidden rounded-lg border bg-background/95 text-xs shadow-lg backdrop-blur">
+          <button onClick={locateMe} disabled={locating} className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent disabled:opacity-60">
+            {locating ? <Loader2 className="size-3.5 animate-spin" /> : <LocateFixed className="size-3.5" />} My location
+          </button>
+          {hasGoogle && (
+            <button
+              onClick={() => {
+                const map = mapRef.current
+                if (!map) return
+                setView3d({ center: described?.center ?? (map.getCenter().toArray() as LngLat), zoom: map.getZoom(), title: described?.title })
+              }}
+              className="flex items-center gap-1.5 border-l px-3 py-2 hover:bg-accent"
+              title="Google Photorealistic 3D of the selected place, or the map centre"
+            >
+              <Rotate3d className="size-3.5" /> Real 3D
+            </button>
+          )}
+          <button onClick={() => { const id = assets.find((a) => a.id === 'shivalik-shilp')?.id ?? assets[0]?.id; if (id) openAssetOnMap(id) }} disabled={!assets.length} className="flex items-center gap-1.5 border-l px-3 py-2 hover:bg-accent disabled:opacity-50" title="Standalone 3D model with floor-by-floor offices">
+            <Building2 className="size-3.5" /> Shivalik Shilp 3D
+          </button>
+          <Link to="/map/gift-city" className="flex items-center gap-1.5 border-l px-3 py-2 hover:bg-accent">
+            <Building2 className="size-3.5" /> GIFT City 3D
+          </Link>
+        </div>
         <OsmChip status={osmStatus} zoom={zoom} counts={osmCounts} />
+        {googleNote && (
+          <p role="status" className="flex w-full max-w-md items-start gap-2 rounded-lg border bg-background/95 px-3 py-2 text-xs text-amber-700 shadow-lg backdrop-blur dark:text-amber-400">
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <span className="flex-1">{googleNote}</span>
+            <button onClick={() => setGoogleNote(null)} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          </p>
+        )}
+        {locateError && (
+          <p role="alert" className="flex w-full max-w-md items-start gap-2 rounded-lg border bg-background/95 px-3 py-2 text-xs text-amber-700 shadow-lg backdrop-blur dark:text-amber-400">
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <span className="flex-1">{locateError}</span>
+            <button onClick={() => setLocateError(null)} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          </p>
+        )}
       </div>
 
       {/* Mobile: search button + sheet */}
@@ -883,6 +1440,104 @@ export default function MapPage() {
 
 /* ── Pieces ────────────────────────────────────────────────────── */
 
+const unitCountsOf = (a: Asset) => {
+  const m = new Map<number, number>()
+  for (const u of a.units) m.set(u.floor, (m.get(u.floor) ?? 0) + 1)
+  return m
+}
+
+/** Asset panel in the map's right column; the 3D building itself is drawn on the map. */
+function MapAssetPanel({
+  asset,
+  assets,
+  selected,
+  onSelect,
+  hovered,
+  onHover,
+  mode,
+  onMode,
+  onClose,
+  adjusting,
+  onAdjusting,
+  onRotate,
+  focusUnitId,
+  onFocusUnit,
+}: {
+  asset: Asset
+  assets: Asset[]
+  selected: number | null
+  onSelect: (f: number | null) => void
+  hovered: number | null
+  onHover: (f: number | null) => void
+  mode: 'real' | 'data'
+  onMode: (m: 'real' | 'data') => void
+  onClose: () => void
+  adjusting: boolean
+  onAdjusting: (on: boolean) => void
+  onRotate: (deg: number) => void
+  focusUnitId: string | null
+  onFocusUnit: (id: string | null) => void
+}) {
+  const { nearby, areasState } = useAssetSurroundings(asset, assets)
+  return (
+    <AssetPanel
+      asset={asset}
+      assets={assets}
+      selected={selected}
+      onSelect={onSelect}
+      hovered={hovered}
+      onHover={onHover}
+      nearby={nearby}
+      areasState={areasState}
+      onClose={onClose}
+      focusUnitId={focusUnitId}
+      onFocusUnit={onFocusUnit}
+      className="animate-reveal absolute inset-x-0 bottom-0 z-20 h-[62%] overflow-hidden rounded-t-2xl border shadow-2xl [animation-duration:0.35s] lg:inset-x-auto lg:bottom-4 lg:right-4 lg:top-4 lg:h-auto lg:w-[420px] lg:rounded-xl"
+      toolbar={
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex overflow-hidden rounded-md border">
+            {(
+              [
+                ['real', 'Realistic'],
+                ['data', 'Offices per floor'],
+              ] as const
+            ).map(([k, label]) => (
+              <button key={k} onClick={() => onMode(k)} className={cn('px-2.5 py-1.5', mode === k ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {selected != null && (
+            <button onClick={() => onSelect(null)} className="rounded-md border px-2.5 py-1.5 hover:bg-accent">
+              Whole building
+            </button>
+          )}
+          <Link to={'/assets/' + encodeURIComponent(asset.id)} className="ml-auto rounded-md border px-2.5 py-1.5 hover:bg-accent">
+            Full-screen 3D
+          </Link>
+          <button onClick={() => onAdjusting(!adjusting)} className={cn('rounded-md border px-2.5 py-1.5', adjusting ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}>
+            {adjusting ? 'Done adjusting' : 'Adjust position'}
+          </button>
+          {adjusting ? (
+            <div className="w-full space-y-2 rounded-md border border-dashed p-2.5">
+              <p className="text-[11px] text-muted-foreground">Drag the building on the map onto its real footprint, then set the rotation. Changes are saved automatically.</p>
+              <label className="flex items-center gap-2 text-[11px]">
+                Rotation
+                <input type="range" min={0} max={359} step={1} value={asset.rotationDeg ?? 0} onChange={(e) => onRotate(Number(e.target.value))} className="flex-1 accent-[var(--brand)]" />
+                <span className="w-9 text-right tabular-nums">{Math.round(asset.rotationDeg ?? 0)}°</span>
+              </label>
+            </div>
+          ) : (
+            <span className="w-full text-[11px] text-muted-foreground">
+              Click a floor to slide it out of the building and see its offices; click an office for its details. Walk inside for 3D / VR.
+            </span>
+          )}
+        </div>
+      }
+    />
+  )
+}
+
 function chips(q: MapQuery) {
   const c: string[] = [q.target === 'amenities' ? 'Amenities' : q.target === 'place' ? 'Go to place' : 'Projects']
   if (q.bhk) c.push(`${q.bhk} BHK`)
@@ -896,6 +1551,7 @@ function chips(q: MapQuery) {
 }
 
 function tooltipFor(f: MapGeoJSONFeature, areas: Map<string, OsmArea>, pois: Map<string, OsmPoi>) {
+  // Asset tooltips are built (and escaped) in geometry.ts.
   const id = String(f.properties?.id)
   const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!)
   switch (f.layer.id) {
@@ -957,7 +1613,7 @@ function OsmChip({ status, zoom, counts }: { status: OsmStatus; zoom: number; co
           ? 'Some OpenStreetMap areas failed; move the map to retry'
           : 'OpenStreetMap is busy; move the map to retry'
         : zoom < 11.5 && !loadedAny
-          ? 'Zoom in for live map data'
+          ? 'Click anywhere for its address · zoom in for amenities'
           : status === 'idle'
             ? 'Connecting to OpenStreetMap…'
             : `OpenStreetMap: ${counts.buildings} buildings · ${counts.places} places`
@@ -1109,6 +1765,8 @@ const MARKER_CSS = `
 .reos-marker-label{white-space:nowrap;border-radius:999px;background:#0c4a6e;color:#fff;font:500 12px/1 Inter,sans-serif;padding:7px 11px;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .2s,background .2s}
 .reos-marker-label b{font-weight:600;margin-right:4px}
 .reos-marker-dot{order:2;width:10px;height:10px;border-radius:50%;background:#0284c7;border:2px solid #fff;box-shadow:0 0 0 4px rgba(2,132,199,.35)}
+.reos-marker.is-building .reos-marker-label{background:#1e293b}
+.reos-marker.is-building .reos-marker-dot{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.35)}
 .reos-marker:hover .reos-marker-label,.reos-marker.is-active .reos-marker-label{transform:translateY(-2px) scale(1.05);background:#c49a63}
 .reos-tip .maplibregl-popup-content{padding:6px 9px;border-radius:6px;font:12px/1.35 Inter,sans-serif;color:#1c1917}
 .reos-tip .maplibregl-popup-content span{color:#78716c}
