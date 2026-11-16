@@ -1,6 +1,7 @@
 import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 // === QUERY: GET SINGLE LEAD PREDICTION ===
 export const getPredictionByLead = query({
@@ -134,7 +135,8 @@ export const runPrediction = action({
   args: {
     leadId: v.id("leads"),
   },
-  handler: async (ctx, args) => {
+  // Explicit return type breaks the api <-> action type cycle that otherwise makes `api` resolve to any.
+  handler: async (ctx, args): Promise<{ success: boolean; predictionId: Id<"predictions">; mode: "api" | "heuristic" }> => {
     // 1. Fetch Lead context
     const context = await ctx.runQuery(api.predictions.getLeadPredictionContext, {
       leadId: args.leadId,

@@ -8,13 +8,15 @@ export const getVoiceCalls = query({
     leadId: v.optional(v.id("leads"))
   },
   handler: async (ctx, args) => {
-    if (args.leadId) {
+    const leadId = args.leadId;
+    if (leadId) {
       return await ctx.db
         .query("voiceCalls")
-        .withIndex("by_leadId", (q) => q.eq("leadId", args.leadId))
+        .withIndex("by_leadId", (q) => q.eq("leadId", leadId))
         .collect();
     }
-    return await ctx.db.query("voiceCalls").order("desc").collect();
+    // Bounded read: an unbounded collect() over large transcript docs can exceed Convex read limits.
+    return await ctx.db.query("voiceCalls").order("desc").take(100);
   },
 });
 
@@ -110,180 +112,123 @@ export const executePipelineAutomation = mutation({
     const rawBudget = lead.budget || 18000000;
     const budgetStr = formatBudget(rawBudget, language);
 
-    let transcript = [];
+    // ── Call script ────────────────────────────────────────────────
+    // Agent is Riya, a woman, calling on behalf of RealEstate OS. Every Hindi/Gujarati verb she
+    // speaks uses feminine forms; the lead's forms follow their detected gender.
+    const BRAND = "RealEstate OS";
+    const AGENT = "Riya";
+    const projectName = project.replace(/^Ai\s*RealEstate\s*OS\s+/i, "").trim() || project;
+    const firstName = leadFirstName.replace(/^(Dr|Mr|Mrs|Ms)\.?$/i, "") || leadName.split(" ")[1] || leadName;
+
+    // Pull real details from the project record so the pitch isn't generic.
+    const property = (await ctx.db.query("properties").collect()).find(
+      (p) => p.name === project || p.name.endsWith(projectName),
+    );
+    const location = property?.location ?? "Ahmedabad";
+    const amenities = (property?.amenities ?? []).slice(0, 2);
+    const startCr = property ? (property.price / 1e7).toFixed(2).replace(/\.?0+$/, "") : null;
+    const ready = property?.status === "Ready to Move";
+    const pick = <T,>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
+
+    let transcript: { sender: string; text: string; time: string }[] = [];
     let callSummary = "";
-    let sentiment = "Interested";
-
-    const agentGender: "male" | "female" = "male";
-
-    const guAgentSpeaking =
-      agentGender === "male" ? "કરી રહ્યો છું" : "કરી રહી છું";
-
-    const guAgentCall =
-      agentGender === "male" ? "બોલી રહ્યો છું" : "બોલી રહી છું";
-
-    const hiAgentCall =
-      agentGender === "male" ? "बोल रहा हूँ" : "बोल रही हूँ";
-
-    const hiAgentSpeak =
-      agentGender === "male" ? "रहा" : "रही";
+    const sentiment = "Interested";
 
     if (language === "hi") {
-      const lRaha  = isFemaleLead ? "रही" : "रहा";
-      const lTha   = isFemaleLead ? "थी" : "था";
-      const lDijiye = "दीजिए";
-      const lSaku  = "सकूँ";
-
+      const lRahi = isFemaleLead ? "रही" : "रहा";
+      const lThi = isFemaleLead ? "थी" : "था";
+      const amen = amenities.length ? amenities.join(" और ") : "क्लबहाउस और स्विमिंग पूल";
       transcript = [
+        { sender: "agent", text: `नमस्ते, क्या मेरी बात ${leadName} जी से हो रही है?`, time: "0:02" },
+        { sender: "lead", text: `हाँ, मैं ${leadName} बोल ${lRahi} हूँ। आप कौन?`, time: "0:06" },
         {
           sender: "agent",
-          text: `नमस्ते, क्या मैं ${leadName} जी से बात कर ${hiAgentSpeak} हूँ?`,
-          time: "0:02"
+          text: pick([
+            `मैं ${AGENT} बोल रही हूँ, ${BRAND} से। आपने हाल ही में ${location} में हमारे प्रोजेक्ट ${projectName} के ${bhk} के बारे में पूछताछ की थी। क्या अभी दो मिनट बात कर सकते हैं?`,
+            `नमस्ते ${firstName} जी, मैं ${AGENT}, ${BRAND} से। आपने ${projectName} में ${bhk} फ़्लैट के लिए रुचि दिखाई थी, इसलिए कॉल किया। क्या यह सही समय है?`,
+          ]),
+          time: "0:14",
         },
         {
           sender: "lead",
-          text: `हाँ, मैं ${leadName} बोल ${lRaha} हूँ। आप कौन?`,
-          time: "0:06"
+          text: `हाँ, मैं देख ${lRahi} ${lThi}। मेरा बजट लगभग ${budgetStr} है। क्या उसमें कुछ अच्छा मिल जाएगा?`,
+          time: "0:24",
         },
         {
           sender: "agent",
-          text: `नमस्ते! मैं शिवालिक ग्रुप से बात कर ${hiAgentSpeak} हूँ। मुझे दिखा कि आपने हमारी परियोजना ${project} में रुचि दिखाई थी और ${bhk} फ़्लैट के विकल्प देख रहे थे। क्या यह आपसे बात करने का सही समय है?`,
-          time: "0:18"
+          text: `जी बिल्कुल। ${projectName} में ${bhk} ${startCr ? `${startCr} करोड़ से शुरू होते हैं` : "आपके बजट में उपलब्ध हैं"}${ready ? ", और यह रेडी-टू-मूव है" : ""}। यहाँ ${amen} जैसी सुविधाएँ हैं, और प्रोजेक्ट RERA रजिस्टर्ड है। क्या मैं आपको ब्रोशर और फ़्लोर प्लान भेज दूँ?`,
+          time: "0:38",
         },
-        {
-          sender: "lead",
-          text: `हाँ, मैं देख ${lRaha} ${lTha}। मुझे ${budgetStr} के बजट के आसपास कोई अच्छा फ़्लैट चाहिए। क्या आपके पास विकल्प उपलब्ध हैं?`,
-          time: "0:25"
-        },
+        { sender: "lead", text: `हाँ, ज़रूर भेज दीजिए। मैं परिवार के साथ देख ${isFemaleLead ? "लूँगी" : "लूँगा"}।`, time: "0:46" },
         {
           sender: "agent",
-          text: `बिल्कुल! हमारे पास ${project} में बहुत अच्छे विकल्प हैं जो आपके बजट में आते हैं। इनमें बेहतरीन धूप, खुली बालकनी और स्मार्ट होम सुविधाएं हैं। क्या मैं आपको आधिकारिक साइट ब्रोशर भेज दूँ?`,
-          time: "0:42"
+          text: `मैंने अभी ब्रोशर आपके व्हाट्सएप और ईमेल पर भेज दिया है। मैं कल सुबह 11 बजे एक फ़ॉलो-अप कॉल रख रही हूँ, ताकि आपके सवालों के जवाब दे सकूँ और साइट विज़िट तय कर सकें। ठीक रहेगा?`,
+          time: "1:00",
         },
-        {
-          sender: "lead",
-          text: `हाँ, ज़रूर भेज ${lDijiye} ताकि मैं फ़्लोर प्लान देख ${lSaku}।`,
-          time: "0:48"
-        },
-        {
-          sender: "agent",
-          text: `बहुत बढ़िया! मैंने ब्रोशर भेजने की प्रक्रिया शुरू कर दी है। आपको व्हाट्सएप और ईमेल पर ब्रोशर का लिंक मिल जाएगा। मैं कल सुबह 11:00 बजे एक फ़ॉलो-अप कॉल भी शेड्यूल कर ${hiAgentSpeak} हूँ ताकि हमारी टीम आपके सवालों के जवाब दे सके। क्या यह ठीक रहेगा?`,
-          time: "1:05"
-        },
-        {
-          sender: "lead",
-          text: `हाँ, कल सुबह 11 बजे ठीक है। धन्यवाद!`,
-          time: "1:11"
-        },
-        {
-          sender: "agent",
-          text: `बहुत-बहुत धन्यवाद! ब्रोशर ज़रूर देखिएगा। कल बात करते हैं। आपका दिन शुभ हो!`,
-          time: "1:20"
-        }
+        { sender: "lead", text: `हाँ, कल 11 बजे ठीक है। धन्यवाद।`, time: "1:08" },
+        { sender: "agent", text: `धन्यवाद ${firstName} जी। ब्रोशर ज़रूर देखिएगा, कल बात करते हैं। आपका दिन शुभ हो!`, time: "1:15" },
       ];
-      callSummary = `शिवालिक AI आउटरीच सफल रहा। ${leadName} ने ${project} के लिए ब्रोशर का अनुरोध किया। कल सुबह 11 बजे का फॉलो-अप शेड्यूल किया गया।`;
+      callSummary = `${AGENT} (${BRAND}) ने ${leadName} से बात की। ${projectName} के ${bhk} में रुचि, बजट ${budgetStr}। ब्रोशर भेजा गया, कल सुबह 11 बजे फ़ॉलो-अप तय।`;
     } else if (language === "gu") {
       const honorific = getGujHonorific(leadName);
-      const gShoDhiRaha = isFemaleLead ? "શોધી રહી છું" : "શોધી રહ્યો છું";
-      const leadSalutation = isFemaleLead ? "બહેન" : "સાહેબ";
-
+      const lShodhu = isFemaleLead ? "શોધી રહી છું" : "શોધી રહ્યો છું";
+      const amen = amenities.length ? amenities.join(" અને ") : "ક્લબહાઉસ અને સ્વિમિંગ પૂલ";
       transcript = [
+        { sender: "agent", text: `નમસ્તે, શું હું ${leadName} ${honorific} સાથે વાત કરી રહી છું?`, time: "0:02" },
+        { sender: "lead", text: `હા, હું ${leadName} બોલું છું. આપ કોણ?`, time: "0:06" },
         {
           sender: "agent",
-          text: `નમસ્કાર ${leadName} ${honorific}, હું શિવાલિક ગ્રુપમાંથી ${guAgentCall}. શું આપ સાથે બે મિનિટ વાત કરી શકું?`,
-          time: "0:02"
+          text: pick([
+            `હું ${AGENT} બોલી રહી છું, ${BRAND} માંથી. આપે ${location} માં અમારા ${projectName} પ્રોજેક્ટના ${bhk} વિશે પૂછપરછ કરી હતી. શું બે મિનિટ વાત કરી શકીએ?`,
+            `નમસ્તે ${firstName} ${honorific}, હું ${AGENT}, ${BRAND} તરફથી. આપે ${projectName} માં ${bhk} ફ્લેટ માટે રસ બતાવ્યો હતો, એટલે ફોન કર્યો. અત્યારે અનુકૂળ છે?`,
+          ]),
+          time: "0:14",
         },
-        {
-          sender: "lead",
-          text: `હા, હું ${leadName} બોલું છું. બોલોને, આપ કોણ?`,
-          time: "0:06"
-        },
-        {
-          sender: "agent",
-          text: `આપે થોડા દિવસ પહેલા અમારા ${project} પ્રોજેક્ટ અંગે પૂછપરછ કરી હતી. ખાસ કરીને ${bhk} ફ્લેટમાં આપનો રસ હતો. એટલે થોડું માર્ગદર્શન આપવા માટે ફોન કર્યો છે.`,
-          time: "0:18"
-        },
-        {
-          sender: "lead",
-          text: `હા બોલો ${agentGender === "male" ? "સાહેબ" : "બહેન"}, હું હાલમાં ${budgetStr} ના બજેટમાં સારો ફ્લેટ ${gShoDhiRaha}. શું હાલ કોઈ યુનિટ ઉપલબ્ધ છે?`,
-          time: "0:25"
-        },
+        { sender: "lead", text: `હા બહેન, હું ${budgetStr} ના બજેટમાં સારો ફ્લેટ ${lShodhu}. કંઈ ઉપલબ્ધ છે?`, time: "0:24" },
         {
           sender: "agent",
-          text: `ચોક્કસ ${leadSalutation}. અમારા ${project} પ્રોજેક્ટમાં હાલમાં ખૂબ સરસ ${bhk} ના વિકલ્પો ઉપલબ્ધ છે. સારી હવા, કુદરતી પ્રકાશ, વિશાળ બાલ્કની અને તમામ આધુનિક સુવિધાઓ સાથે આવે છે. જો આપને અનુકૂળ હોય તો હું હમણાં જ સાઇટ બ્રોશર WhatsApp અને Email પર મોકલી દઉં?`,
-          time: "0:42"
+          text: `ચોક્કસ. ${projectName} માં ${bhk} ${startCr ? `${startCr} કરોડથી શરૂ થાય છે` : "આપના બજેટમાં ઉપલબ્ધ છે"}${ready ? ", અને પઝેશન તરત મળી શકે છે" : ""}. અહીં ${amen} જેવી સુવિધાઓ છે અને પ્રોજેક્ટ RERA રજિસ્ટર્ડ છે. હું આપને બ્રોશર અને ફ્લોર પ્લાન મોકલી દઉં?`,
+          time: "0:38",
         },
-        {
-          sender: "lead",
-          text: `હા જરૂર મોકલી આપો. હું અને મારો પરિવાર સાથે બેસીને ફ્લોર પ્લાન અને પ્રાઇસિંગ જોઈ લઈશું.`,
-          time: "0:48"
-        },
+        { sender: "lead", text: `હા, જરૂર મોકલો. પરિવાર સાથે બેસીને જોઈ લઈશું.`, time: "0:46" },
         {
           sender: "agent",
-          text: `સરસ. બ્રોશર થોડા જ ક્ષણોમાં પહોંચી જશે. હું આવતીકાલે સવારે ૧૧ વાગ્યે ફરી સંપર્ક કરીશ જેથી આપના કોઈ પ્રશ્ન હોય તો તેનું માર્ગદર્શન આપી શકીએ.`,
-          time: "1:05"
+          text: `મેં હમણાં જ બ્રોશર આપના WhatsApp અને ઈમેલ પર મોકલી દીધું છે. આવતીકાલે સવારે ૧૧ વાગ્યે હું ફરી ફોન કરીશ, જેથી આપના પ્રશ્નોના જવાબ આપી શકું અને સાઇટ વિઝિટ નક્કી કરી શકીએ. બરાબર છે?`,
+          time: "1:00",
         },
-        {
-          sender: "lead",
-          text: `બરાબર ${agentGender === "male" ? "સાહેબ" : "બહેન"}. આવતીકાલે સવારે વાત કરીએ. આભાર.`,
-          time: "1:11"
-        },
-        {
-          sender: "agent",
-          text: `ખૂબ ખૂબ આભાર ${leadName} ${honorific}. આપનો કિંમતી સમય આપવા બદલ આભાર. બ્રોશર જરૂર જોઈ લેજો. શુભ દિવસ.`,
-          time: "1:20"
-        }
+        { sender: "lead", text: `બરાબર બહેન, કાલે ૧૧ વાગ્યે વાત કરીએ. આભાર.`, time: "1:08" },
+        { sender: "agent", text: `આભાર ${firstName} ${honorific}. બ્રોશર જરૂર જોઈ લેજો. આપનો દિવસ શુભ રહે!`, time: "1:15" },
       ];
-      callSummary = `શિવાલિક AI આઉટરીચ સફળ રહ્યો. ${leadName} એ પ્રોજેક્ટ ${project} માટે સાઇટ બ્રોશર મંગાવ્યું. કાલે સવારે ૧૧ વાગ્યાનો ફોલો-અપ નક્કી કર્યો.`;
+      callSummary = `${AGENT} (${BRAND}) એ ${leadName} સાથે વાત કરી. ${projectName} ના ${bhk} માં રસ, બજેટ ${budgetStr}. બ્રોશર મોકલ્યું, કાલે સવારે ૧૧ વાગ્યે ફોલો-અપ નક્કી.`;
     } else {
+      const amen = amenities.length ? amenities.join(" and ").toLowerCase() : "a clubhouse and pool";
       transcript = [
+        { sender: "agent", text: `Hello, am I speaking with ${leadName}?`, time: "0:02" },
+        { sender: "lead", text: `Yes, speaking. Who's this?`, time: "0:05" },
         {
           sender: "agent",
-          text: `Hello, is this ${leadName}?`,
-          time: "0:02"
+          text: pick([
+            `Hi ${firstName}, this is ${AGENT} from ${BRAND}. You recently enquired about a ${bhk} at ${projectName} in ${location}. Is this a good time for a quick two-minute chat?`,
+            `Hi ${firstName}, I'm ${AGENT}, calling from ${BRAND}. Thanks for your interest in ${projectName}. I'd love to help you with the ${bhk} options. Do you have a couple of minutes?`,
+          ]),
+          time: "0:12",
         },
-        {
-          sender: "lead",
-          text: `Yes, this is ${leadName}. Who is this?`,
-          time: "0:06"
-        },
-        {
-          sender: "agent",
-          text: `Hi ${leadName}! I'm calling from Ai RealEstate OS CRM. I see you recently inquired about our luxury residential high-rise project, ${project}, and were specifically checking options for a premium ${bhk} layout. Am I reaching you at a good time?`,
-          time: "0:18"
-        },
-        {
-          sender: "lead",
-          text: `Yes, I was looking at that. I'm searching for a property in that neighborhood with a budget around ${budgetStr}. Are there units available?`,
-          time: "0:25"
-        },
+        { sender: "lead", text: `Sure. I'm looking for something around ${budgetStr}. Do you have anything that fits?`, time: "0:22" },
         {
           sender: "agent",
-          text: `Yes, absolutely! We have a few premium garden-facing ${bhk} options in ${project} that align perfectly with your budget. They feature high sunlight ratings, structural height optimization, and modern glassmorphic balconies. Would you like me to send you the site brochure?`,
-          time: "0:42"
+          text: `We do. ${bhk} homes at ${projectName} ${startCr ? `start at about ${startCr} crore` : "are available in your range"}${ready ? ", and it's ready to move in" : ""}. Residents get ${amen}, and the project is RERA registered. Shall I send you the brochure and floor plans?`,
+          time: "0:34",
         },
-        {
-          sender: "lead",
-          text: `Yes, definitely. Please send it over so I can review the floor plans.`,
-          time: "0:48"
-        },
+        { sender: "lead", text: `Yes, please send them. I'd like to go through them with my family.`, time: "0:44" },
         {
           sender: "agent",
-          text: `Wonderful! I have triggered the brochure dispatch system. You'll receive the PDF download link on WhatsApp and your email, ${email}, right away. I'm also scheduling an automated follow-up call for tomorrow at 11:00 AM so our coordinator can answer any structural questions. Would that be alright?`,
-          time: "1:05"
+          text: `Done. The brochure is on its way to your WhatsApp and to ${email}. I'll call you tomorrow at 11 AM to answer any questions and, if you like, set up a site visit. Does that work?`,
+          time: "0:56",
         },
-        {
-          sender: "lead",
-          text: `Sure, tomorrow at 11 AM works for me. Thanks for the quick call!`,
-          time: "1:11"
-        },
-        {
-          sender: "agent",
-          text: `Excellent. Enjoy reviewing the brochure, and we will connect tomorrow. Have a great day, ${leadName}!`,
-          time: "1:20"
-        }
+        { sender: "lead", text: `Tomorrow at 11 works. Thanks, ${AGENT}.`, time: "1:04" },
+        { sender: "agent", text: `Thank you, ${firstName}. Enjoy the brochure, and speak tomorrow. Have a lovely day!`, time: "1:10" },
       ];
-      callSummary = `Simulated AI outreach call successful. Customer confirmed interest in a ${bhk} at ${project} with a budget of ${budgetStr}. site brochure sent automatically, and a next-day follow-up call has been scheduled.`;
+      callSummary = `${AGENT} (${BRAND}) spoke with ${leadName}. Interested in a ${bhk} at ${projectName}, budget ${budgetStr}. Brochure sent; follow-up booked for tomorrow 11 AM.`;
     }
 
     // 2. Save the Call Log to database

@@ -46,3 +46,13 @@ desktop.ini
 *.njsproj
 *.sln
 *.sw?
+.vercel
+
+# ── Local tool state (machine-specific, never shared) ──
+.convex/
+.claude/settings.local.json
+.claude/*.local.*
+*.pem
+*.key
+tmp/
+scratch/

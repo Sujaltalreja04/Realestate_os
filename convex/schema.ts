@@ -132,7 +132,22 @@ export default defineSchema({
     sentiment: v.string(),
     brochureSent: v.boolean(),
     followupScheduled: v.boolean(),
-    date: v.string()
+    date: v.string(),
+    // AI judgement of whether the lead is worth more sales time, written after the call.
+    // Optional so existing calls stay valid.
+    analysis: v.optional(
+      v.object({
+        verdict: v.union(v.literal("pursue"), v.literal("nurture"), v.literal("drop")),
+        score: v.number(),
+        summary: v.string(),
+        buyingSignals: v.array(v.string()),
+        concerns: v.array(v.string()),
+        nextAction: v.string(),
+        followUpInDays: v.number(),
+        model: v.string(),
+        analyzedAt: v.number(),
+      })
+    ),
   }).index("by_leadId", ["leadId"]),
   predictions: defineTable({
     leadId: v.id("leads"),
